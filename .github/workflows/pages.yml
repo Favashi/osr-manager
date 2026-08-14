@@ -44,27 +44,35 @@ jobs:
       # Allowlist: se copia SOLO lo que el navegador necesita en runtime.
       # No se publica .github/, README, LICENSE, herramientas de desarrollo,
       # etc. (ver #12/#37 del pack de infraestructura).
+      #
+      # Raíz del sitio = landing (site/index.html, "página web" de la app).
+      # /app/ = la aplicación real (idéntica a abrir index.html en local).
+      # index.html de la raíz del repo NO se toca ni se publica en la raíz
+      # del sitio: sigue siendo el punto de entrada portable (file://).
       - name: Construir _site (allowlist runtime)
         run: |
           set -e
-          mkdir -p _site
-          cp index.html _site/index.html
-          cp -r css _site/css
-          cp -r js _site/js
-          if [ -d data ]; then cp -r data _site/data; fi
-          if [ -d fonts ]; then cp -r fonts _site/fonts; fi
-          if [ -d assets ]; then cp -r assets _site/assets; fi
+          mkdir -p _site/app
+          cp site/index.html _site/index.html
+
+          cp index.html _site/app/index.html
+          cp -r css _site/app/css
+          cp -r js _site/app/js
+          if [ -d data ]; then cp -r data _site/app/data; fi
+          if [ -d fonts ]; then cp -r fonts _site/app/fonts; fi
+          if [ -d assets ]; then cp -r assets _site/app/assets; fi
           touch _site/.nojekyll
 
       - name: Verificar artifact
         run: |
           set -e
-          test -f _site/index.html || { echo "Falta _site/index.html" >&2; exit 1; }
-          test -d _site/css || { echo "Falta _site/css" >&2; exit 1; }
-          test -d _site/js || { echo "Falta _site/js" >&2; exit 1; }
+          test -f _site/index.html || { echo "Falta _site/index.html (landing)" >&2; exit 1; }
+          test -f _site/app/index.html || { echo "Falta _site/app/index.html" >&2; exit 1; }
+          test -d _site/app/css || { echo "Falta _site/app/css" >&2; exit 1; }
+          test -d _site/app/js || { echo "Falta _site/app/js" >&2; exit 1; }
           test -f _site/.nojekyll || { echo "Falta _site/.nojekyll" >&2; exit 1; }
           echo "Artifact verificado:"
-          find _site -maxdepth 2 | sort
+          find _site -maxdepth 3 | sort
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
@@ -93,5 +101,6 @@ jobs:
             echo ""
             echo "- **Branch:** ${{ github.ref_name }}"
             echo "- **Commit:** ${{ github.sha }}"
-            echo "- **URL:** ${{ steps.deployment.outputs.page_url }}"
+            echo "- **Landing:** ${{ steps.deployment.outputs.page_url }}"
+            echo "- **App:** ${{ steps.deployment.outputs.page_url }}app/"
           } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OSR Manager</title>
+  <meta name="description" content="Herramienta portable para gestionar exploración, hexcrawl, encuentros y combate en juegos OSR. Sin backend, sin instalación, sin build." />
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #05060c;
+      --panel: rgba(0, 0, 0, 0.35);
+      --border: rgba(255, 255, 255, 0.45);
+      --text: #fff;
+      --muted: rgba(255, 255, 255, 0.65);
+      --accent: rgb(255, 255, 0);
+      --dungeon: rgb(255, 176, 0);
+      --wilderness: rgb(0, 168, 168);
+      --combat: rgb(168, 0, 0);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: "Courier New", ui-monospace, Menlo, Consolas, monospace;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+
+    main {
+      max-width: 640px;
+      width: 100%;
+    }
+
+    .logo {
+      font-size: 0.8em;
+      line-height: 1.1;
+      white-space: pre;
+      margin: 0 0 8px;
+      color: var(--accent);
+    }
+
+    h1 {
+      margin: 0 0 4px;
+      font-size: 1.6em;
+      letter-spacing: 0.05em;
+    }
+
+    .tagline {
+      margin: 0 0 24px;
+      color: var(--muted);
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 2px solid var(--border);
+      padding: 16px 20px;
+      margin-bottom: 16px;
+    }
+
+    .panel h2 {
+      margin: 0 0 10px;
+      font-size: 1em;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    ul.features {
+      margin: 0;
+      padding-left: 1.2em;
+      color: var(--text);
+    }
+
+    ul.features li { margin-bottom: 6px; }
+
+    ul.features .tag {
+      font-weight: bold;
+    }
+
+    .tag-dungeon { color: var(--dungeon); }
+    .tag-wilderness { color: var(--wilderness); }
+    .tag-combat { color: var(--combat); }
+
+    .cta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 24px 0;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 10px 18px;
+      border: 2px solid var(--border);
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      text-decoration: none;
+      font-family: inherit;
+      font-size: 1em;
+    }
+
+    .btn:hover, .btn:focus-visible {
+      background: var(--accent);
+      color: #000;
+      border-color: #000;
+    }
+
+    .btn.primary {
+      border-color: var(--accent);
+    }
+
+    footer {
+      color: var(--muted);
+      font-size: 0.85em;
+      line-height: 1.6;
+    }
+
+    footer a { color: var(--wilderness); }
+  </style>
+</head>
+<body>
+  <main>
+    <pre class="logo"> ██████╗ ███████╗██████╗
+██╔═══██╗██╔════╝██╔══██╗
+██║   ██║███████╗██████╔╝
+██║   ██║╚════██║██╔══██╗
+╚██████╔╝███████║██║  ██║
+ ╚═════╝ ╚══════╝╚═╝  ╚═╝</pre>
+    <h1>OSR MANAGER</h1>
+    <p class="tagline">Herramienta portable para gestionar exploración, hexcrawl, encuentros y combate en juegos OSR.</p>
+
+    <div class="panel">
+      <h2>Qué es</h2>
+      <p>Aplicación 100% cliente: HTML + CSS + JavaScript, sin backend, sin instalación, sin build. Se abre directamente en el navegador — la misma app funciona en local (<code>file://</code>) y aquí en la web.</p>
+    </div>
+
+    <div class="panel">
+      <h2>Modos</h2>
+      <ul class="features">
+        <li><span class="tag tag-dungeon">Mazmorra</span> — turnos, luz, efectos, descanso, encuentros.</li>
+        <li><span class="tag tag-wilderness">Exterior</span> — hexcrawl: viaje por hexes, terreno, recursos, clima, caza, campamento.</li>
+        <li><span class="tag tag-combat">Combate</span> — iniciativa, daño/curación, estados, moral y reacción.</li>
+      </ul>
+    </div>
+
+    <div class="panel">
+      <h2>Sistemas compatibles</h2>
+      <p>Ruleset Core con perfiles para Aventuras en la Marca del Este, Old-School Essentials, B/X, BECMI, LotFP, OD&amp;D/0e y AD&amp;D 1e.</p>
+    </div>
+
+    <div class="cta">
+      <a class="btn primary" href="app/">Abrir la app →</a>
+      <a class="btn" href="https://github.com/Favashi/osr-manager">Código en GitHub</a>
+    </div>
+
+    <footer>
+      <p>Guardado local en el navegador (<code>localStorage</code>) + exportar/importar campaña como JSON. Sin cuentas, sin servidores, sin telemetría.</p>
+      <p>Código MIT. Ver <a href="https://github.com/Favashi/osr-manager/blob/main/LICENSE">LICENSE</a> y <a href="https://github.com/Favashi/osr-manager/blob/main/THIRD_PARTY_NOTICES.md">THIRD_PARTY_NOTICES.md</a>.</p>
+    </footer>
+  </main>
+</body>
+</html>

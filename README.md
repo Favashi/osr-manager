@@ -82,7 +82,15 @@ origen distinto de una URL `https://`). Ver la sección
 ## GitHub Pages
 
 Además de la versión portable, este repositorio incluye un workflow para
-publicar la misma aplicación como página web estática en GitHub Pages.
+publicar la misma aplicación en GitHub Pages, junto con una landing:
+
+- **Raíz del sitio** (`/`) — landing: qué es OSR Manager, modos, sistemas
+  compatibles, enlace a la app y al repositorio. Fuente: `site/index.html`.
+- **`/app/`** — la aplicación real, idéntica a abrir `index.html` en local.
+
+El `index.html` de la raíz del repositorio **no cambia de función**: sigue
+siendo el punto de entrada portable (`file://`, doble clic). El workflow lo
+copia a `/app/` del sitio publicado; no se publica en la raíz del sitio.
 
 La publicación **no es automática**: ningún commit ni pull request dispara
 un despliegue. Se publica bajo demanda:
@@ -143,14 +151,17 @@ Archivo → Importar   (carga ese .json)
 ## Estructura del proyecto
 
 ```text
-index.html               Punto de entrada de la aplicación
+index.html               Punto de entrada de la aplicación (portable, file://)
 css/                      TuiCss + overrides propios (custom.css) + fuentes e imágenes
 js/                        Lógica de la app (estado, motores de Mazmorra/Exterior/Combate, Ruleset Core en js/rules/)
 
-.github/workflows/       Workflow de publicación manual a GitHub Pages
+site/index.html           Landing publicada en la raíz de GitHub Pages (no afecta a la versión portable)
+
+.github/workflows/       Workflow de publicación manual a GitHub Pages (landing en / + app en /app/)
 licenses/                 Textos de licencia de terceros (ver THIRD_PARTY_NOTICES.md)
 
 README.md                 Este documento
+CHANGELOG.md               Historial de versiones
 LICENSE                    Licencia MIT del código original del proyecto
 THIRD_PARTY_NOTICES.md     Contenido/componentes de terceros y su licencia
 .gitignore
