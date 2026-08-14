@@ -1,0 +1,935 @@
+/*
+ * La estructura y estilo general de UI se consideran estables.
+ * Los siguientes desarrollos deben priorizar funcionalidad.
+ * No modificar layout, paleta o componentes generales salvo
+ * requerimiento funcional explícito.
+ */
+
+:root {
+  --mode-dungeon: rgb(255, 176, 0);
+  --mode-dungeon-text: #000;
+  --mode-wilderness: rgb(0, 168, 168);
+  --mode-wilderness-text: #000;
+  --mode-combat: rgb(168, 0, 0);
+  --mode-combat-text: #fff;
+}
+
+.app-window.mode-dungeon {
+  --current-mode-color: var(--mode-dungeon);
+  --current-mode-text: var(--mode-dungeon-text);
+}
+
+.app-window.mode-wilderness {
+  --current-mode-color: var(--mode-wilderness);
+  --current-mode-text: var(--mode-wilderness-text);
+}
+
+.app-window.mode-combat {
+  --current-mode-color: var(--mode-combat);
+  --current-mode-text: var(--mode-combat-text);
+}
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: #000;
+  color: #fff;
+  font-family: "Lucida Console", "Courier New", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.app-shell {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: safe center;
+  justify-content: safe center;
+  padding: 10px;
+  background: #000;
+  overflow: auto;
+}
+
+.app-window {
+  width: 960px;
+  max-width: 90vw;
+  margin: auto;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  background: rgb(0, 0, 168);
+  box-shadow: 10px 10px black;
+  border: 2px solid #fff;
+  transition: all 0.15s ease;
+  min-height: 600px;
+  max-height: 90vh;
+  overflow: hidden;
+}
+
+.app-window.maximized {
+  width: 98vw;
+  max-width: 98vw;
+  height: 95vh;
+  max-height: 95vh;
+}
+
+.app-fieldset {
+  margin: 0;
+  border: none;
+  padding: 0;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.dos-menu-container {
+  position: relative;
+  width: 100%;
+  margin: 0 0 10px;
+}
+
+.dos-menu-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 24px;
+  width: 100%;
+  background: #c0c0c0;
+  color: #000;
+  border-bottom: 2px solid #000;
+  padding: 0;
+}
+
+.dos-menu-icon {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: #000;
+  line-height: 1;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.dos-menu-icon::before {
+  content: '[';
+}
+
+.dos-menu-icon::after {
+  content: ']';
+}
+
+.dos-menu-icon:hover {
+  background: rgb(0, 0, 168);
+  color: #fff;
+}
+
+.dos-app-name {
+  padding: 0 10px 0 2px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.dos-menu-group {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+}
+
+.dos-menu-trigger,
+.dos-menu-panel button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: #000;
+  line-height: 1;
+  cursor: pointer;
+  text-transform: none;
+}
+
+.dos-menu-trigger {
+  min-width: unset;
+  margin: 0;
+  padding: 5px 10px;
+  flex-shrink: 0;
+}
+
+.dos-menu-trigger::first-letter {
+  text-decoration: underline;
+}
+
+.dos-menu-trigger:hover,
+.dos-menu-trigger.is-active {
+  background: rgb(0, 0, 168);
+  color: #fff;
+}
+
+.dos-menu-panel button:hover {
+  background: rgb(0, 0, 168);
+  color: #fff;
+}
+
+.dos-menu-bar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.dos-clock {
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.dos-window-button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: #000;
+  font-family: inherit;
+  line-height: 1;
+  padding: 4px 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.dos-window-button::before {
+  content: '[';
+}
+
+.dos-window-button::after {
+  content: ']';
+}
+
+.dos-window-button:hover {
+  background: rgb(0, 0, 168);
+  color: #fff;
+}
+
+.dos-menu-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 4px;
+  z-index: 1000;
+  display: block;
+  background: transparent;
+  pointer-events: none;
+}
+
+.dos-menu-dropdown:not(.hidden) {
+  pointer-events: auto;
+}
+
+.dos-menu-panel {
+  display: none;
+  background: #c0c0c0;
+  border: 2px solid #000;
+  border-top: 1px solid #fff;
+  border-left: 1px solid #fff;
+  min-width: 200px;
+  padding: 2px 0;
+  margin: 0;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.4);
+}
+
+.dos-menu-panel.is-open {
+  display: grid;
+}
+
+.dos-menu-panel button {
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-bottom: 1px solid transparent;
+  padding: 2px 24px 2px 12px;
+  background: transparent;
+  color: #000;
+  cursor: pointer;
+  appearance: none;
+}
+
+.dos-menu-panel button:hover {
+  background: rgb(0, 0, 168);
+  color: #fff;
+}
+
+.dos-menu-panel button:last-child {
+  border-bottom: none;
+}
+
+.tui-panel {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  min-width: 0;
+}
+
+.tui-panel-content {
+  overflow-x: hidden;
+}
+
+.btn-primary {
+  border: 2px solid rgb(255, 255, 0) !important;
+  font-weight: bold;
+}
+
+.tui-button.disabled,
+.tui-button:disabled {
+  text-decoration: none !important;
+  background: rgb(168, 168, 168) !important;
+  color: rgba(0, 0, 0, 0.45) !important;
+  box-shadow: none !important;
+  cursor: default !important;
+}
+
+.tui-button:focus-visible,
+.mode-btn:focus-visible,
+.dos-menu-trigger:focus-visible,
+.dos-menu-icon:focus-visible,
+.dos-window-button:focus-visible,
+.panel-add-btn:focus-visible,
+.tui-input:focus-visible {
+  outline: 2px solid rgb(255, 255, 0);
+  outline-offset: 2px;
+}
+
+.app-campaign-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: auto;
+  margin: 0 8px 10px;
+  padding: 5px 10px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.app-campaign-bar:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #fff;
+}
+
+#campaignBarLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#campaignBarStatus {
+  flex-shrink: 0;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.mode-name-accent {
+  display: inline-block;
+  padding: 0 4px;
+  background: var(--current-mode-color, rgba(255, 255, 255, 0.2));
+  color: var(--current-mode-text, #fff);
+  font-weight: bold;
+}
+
+.mode-name-accent::before {
+  content: '[ ';
+}
+
+.mode-name-accent::after {
+  content: ' ]';
+}
+
+.mode-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 8px 12px;
+}
+
+.mode-btn {
+  min-width: 110px;
+}
+
+.mode-btn.active {
+  background: var(--current-mode-color, rgb(255, 255, 0)) !important;
+  color: var(--current-mode-text, #000) !important;
+}
+
+.mode-btn.active::before {
+  content: '[ ';
+}
+
+.mode-btn.active::after {
+  content: ' ]';
+}
+
+.workspace-grid {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  margin: 0 8px;
+}
+
+.side-column,
+.main-column {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.side-panel {
+  min-height: unset;
+}
+
+.tui-panel-header {
+  position: relative;
+  background: rgb(168, 168, 168) !important;
+  color: #000;
+}
+
+.panel-add-btn {
+  appearance: none;
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  line-height: 1;
+  padding: 0 4px;
+  border: none;
+  background: transparent;
+  color: #000;
+  cursor: pointer;
+}
+
+.panel-add-btn::before {
+  content: '[';
+}
+
+.panel-add-btn::after {
+  content: ']';
+}
+
+.panel-add-btn:hover {
+  background: rgb(0, 0, 168);
+  color: #fff;
+}
+
+.compact-list,
+.action-list,
+.session-log {
+  display: grid;
+  gap: 6px;
+}
+
+.compact-list {
+  margin-bottom: 0;
+}
+
+.empty-row,
+.log-entry,
+.summary-box,
+.combatant-row {
+  background: rgba(0, 0, 0, 0.18);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  color: #fff;
+  padding: 4px 8px;
+}
+
+.list-item {
+  background: transparent;
+  border: none;
+  color: #fff;
+  padding: 2px 2px;
+}
+
+.combatant-row {
+  display: grid;
+  grid-template-columns: 34px 1fr 40px 68px 130px;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.combatant-row-header {
+  font-weight: bold;
+  opacity: 0.75;
+  cursor: default;
+}
+
+.combatant-row .col-ini,
+.combatant-row .col-ac,
+.combatant-row .col-hp {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.combatant-row .col-name,
+.combatant-row .col-status {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combatant-row.selected {
+  background: rgb(255, 255, 0) !important;
+  color: #000 !important;
+  border-color: #000;
+}
+
+.combatant-row.defeated,
+.combatant-row.withdrawn {
+  opacity: 0.55;
+}
+
+.status-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  color: #fff;
+  padding: 2px 6px;
+}
+
+.status-chip button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.status-chip button:hover {
+  color: rgb(255, 255, 0);
+}
+
+.party-row {
+  display: grid;
+  grid-template-columns: 1fr 54px 30px 56px;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 2px;
+  color: #fff;
+}
+
+.party-row-header {
+  font-weight: bold;
+  opacity: 0.75;
+}
+
+.party-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.party-class,
+.party-ac {
+  white-space: nowrap;
+}
+
+.party-hp {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.list-item {
+  display: block;
+}
+
+.duration-block {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+}
+
+.duration-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.duration-row .name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.duration-row .remaining {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.ascii-progress.tui-progress-bar {
+  width: 100%;
+  height: 10px;
+  background-color: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.ascii-progress .tui-progress {
+  background-color: rgb(0, 255, 255);
+}
+
+.ascii-progress.warning .tui-progress {
+  background-color: rgb(255, 176, 0);
+}
+
+.ascii-progress.critical .tui-progress {
+  background-color: rgb(255, 0, 0);
+}
+
+.ascii-progress.dimmed .tui-progress {
+  background-color: rgba(255, 255, 255, 0.45);
+}
+
+.light-row {
+  cursor: pointer;
+}
+
+.light-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.travel-compass {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.travel-compass-row {
+  display: flex;
+  gap: 6px;
+}
+
+.travel-compass button,
+.travel-compass-center {
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.travel-compass-center {
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: bold;
+}
+
+.travel-compass-note {
+  font-size: 0.85em;
+  opacity: 0.65;
+  margin-bottom: 8px;
+}
+
+.form-field {
+  display: grid;
+  gap: 4px;
+}
+
+.form-field label {
+  color: #000;
+  letter-spacing: 0.04em;
+}
+
+.compact-field {
+  gap: 3px;
+}
+
+.two-up {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.tui-input {
+  width: 100%;
+  min-height: 30px;
+}
+
+.main-column .view {
+  display: none;
+  gap: 12px;
+}
+
+.main-column .view.active {
+  display: grid;
+}
+
+.status-strip {
+  display: none;
+  flex-wrap: nowrap;
+  gap: 14px;
+  align-items: center;
+  width: auto;
+  margin: 0 8px 12px;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.status-strip.active {
+  display: flex;
+  border-color: var(--current-mode-color, rgba(255, 255, 255, 0.5));
+}
+
+.status-strip strong {
+  margin-right: 4px;
+}
+
+.strip-divider {
+  opacity: 0.5;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.grid-two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.action-list {
+  display: grid;
+  gap: 8px;
+}
+
+.encounter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.summary-box {
+  min-height: 0;
+}
+
+.combat-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.initiative-pill {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--current-mode-color, rgba(255, 255, 255, 0.5));
+  padding: 2px 6px;
+}
+
+#combatantsList {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.log-panel {
+  min-height: 0;
+  margin: 12px 8px 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.log-panel .tui-panel-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.session-log {
+  flex: 1;
+  min-height: 90px;
+  max-height: none;
+  overflow-y: auto;
+}
+
+.log-entry {
+  display: block;
+  line-height: 1.45;
+}
+
+.log-entry:last-child {
+  border-bottom: none;
+}
+
+.app-statusbar {
+  width: auto;
+  margin: 8px 0 0;
+  background: rgb(168, 168, 168);
+  color: #000;
+  border-top: 2px solid #000;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.app-statusbar span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tui-overlap {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.tui-modal {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  align-items: safe center;
+  justify-content: safe center;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.tui-modal.active {
+  display: flex !important;
+}
+
+.modal-window {
+  display: block;
+  width: 380px;
+  max-width: 92vw;
+  max-height: 80vh;
+  margin: auto;
+  overflow-y: auto;
+}
+
+.modal-window-wide {
+  width: 640px;
+  max-width: 94vw;
+}
+
+.modal-body {
+  display: grid;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.log-modal-body {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.tables-modal-section {
+  margin-bottom: 10px;
+}
+
+.tables-modal-section:last-child {
+  margin-bottom: 0;
+}
+
+.tables-modal-section h4 {
+  margin: 0 0 4px;
+}
+
+.about-modal-body {
+  text-align: center;
+}
+
+.about-logo {
+  display: inline-block;
+  margin: 0 0 8px;
+  line-height: 1.15;
+  text-align: left;
+  font-size: 0.6em;
+}
+
+.about-title {
+  margin: 0 0 4px;
+  font-weight: bold;
+  letter-spacing: 0.08em;
+}
+
+.about-facts {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  margin: 8px 0 12px;
+}
+
+.about-facts a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.about-facts a:hover {
+  color: rgb(0, 0, 168);
+}
+
+@media (max-width: 980px) {
+  .workspace-grid,
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-shell {
+    padding: 12px;
+  }
+
+  .grid-two,
+  .two-up {
+    grid-template-columns: 1fr;
+  }
+}

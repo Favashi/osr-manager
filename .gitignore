@@ -1,0 +1,34 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.idea/
+
+# Herramientas de IA/asistentes locales (configuración específica de máquina)
+.claude/
+
+# Node es solo una dependencia de desarrollo (comprobaciones de sintaxis,
+# futuros importadores/tests). OSR Manager no lo necesita para ejecutarse.
+node_modules/
+
+coverage/
+.nyc_output/
+
+*.log
+
+.env
+.env.*
+!.env.example
+
+# Salida generada del workflow de GitHub Pages (se reconstruye en cada
+# publicación manual, no debe versionarse)
+_site/
+
+.cache/
+.tmp/
+tmp/
+
+# Si en el futuro los importadores clonan/descargan fuentes originales a una
+# carpeta temporal, no versionarlas. No ignorar data/compendiums/ (bundles
+# generados que la app SÍ necesita en runtime).
+tools/importers/**/source/
+tools/importers/**/tmp/
