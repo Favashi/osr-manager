@@ -29,10 +29,13 @@
 
             <div id="menuDropdown" class="dos-menu-dropdown hidden" role="menu" aria-label="Menú principal">
               <div class="dos-menu-panel" data-menu-panel="file">
+                <button data-action="newCampaign">Nueva campaña...</button>
                 <button data-action="editCampaign">Editar campaña...</button>
                 <button data-action="save">Guardar</button>
                 <button data-action="import">Importar</button>
                 <button data-action="export">Exportar</button>
+                <div class="dos-menu-separator"></div>
+                <button data-action="loadDemo">Cargar demo...</button>
               </div>
               <div class="dos-menu-panel" data-menu-panel="edit">
                 <button data-action="addCharacter">Personajes...</button>
@@ -43,6 +46,7 @@
                 <button data-action="dice">Dados...</button>
                 <button data-action="tables">Tablas...</button>
                 <button data-action="rules">Reglas...</button>
+                <button data-action="xpCalculator">Calculadora de PX...</button>
                 <button data-action="rest">Descanso corto</button>
               </div>
               <div class="dos-menu-panel" data-menu-panel="help">
@@ -69,28 +73,32 @@
           <div id="dungeonStatusStrip" class="status-strip active" data-mode="dungeon">
             <span><strong>Turno</strong> <span id="dungeonTurnValue">0</span></span>
             <span class="strip-divider">│</span>
-            <span><strong>Hora</strong> <span id="dungeonTimeValue">08:00</span></span>
+            <span><strong>Hora</strong> <span id="dungeonTimeValue">08:00</span> <span id="dungeonPeriodValue" class="day-period"></span></span>
             <span class="strip-divider">│</span>
-            <span><strong>Encuentro</strong> <span id="dungeonEncounterValue">No</span></span>
+            <span><strong>Encuentro</strong> <span id="dungeonEncounterValue">No</span> <span id="dungeonEncounterClock" class="dungeon-clock"></span></span>
             <span class="strip-divider">│</span>
-            <span><strong>Descanso</strong> <span id="dungeonRestValue">Nunca</span></span>
+            <span><strong>Descanso</strong> <span id="dungeonRestValue">Nunca</span> <span id="dungeonRestClock" class="dungeon-clock"></span></span>
           </div>
 
           <div id="wildernessStatusStrip" class="status-strip" data-mode="wilderness">
             <span><strong>Día</strong> <span id="wildernessDayValue">1</span></span>
             <span class="strip-divider">│</span>
-            <span><strong>Hora</strong> <span id="wildernessHourValue">08:00</span></span>
+            <span><strong>Hora</strong> <span id="wildernessHourValue">08:00</span> <span id="wildernessPeriodValue" class="day-period"></span></span>
             <span class="strip-divider">│</span>
             <span><strong>Terreno</strong> <span id="wildernessTerrainValue">-</span></span>
             <span class="strip-divider">│</span>
             <span><strong>Hex</strong> <span id="wildernessHexValue">-</span></span>
           </div>
 
+          <div id="combatStatusStrip" class="status-strip" data-mode="combat">
+            <span id="combatStatusContent">Sin combate activo</span>
+          </div>
+
           <div class="workspace-grid">
             <aside class="side-column">
               <div class="tui-panel side-panel">
                 <div class="tui-panel-header">
-                  Grupo
+                  Grupo <span id="partyCount" class="tui-count"></span>
                   <button type="button" class="panel-add-btn" data-open-modal="characterModal" title="Añadir personaje">+</button>
                 </div>
                 <div class="tui-panel-content">
@@ -104,13 +112,14 @@
                   <button type="button" class="panel-add-btn" data-open-modal="lightModal" title="Añadir fuente de luz">+</button>
                 </div>
                 <div class="tui-panel-content">
+                  <div id="lightingStatus" class="lighting-status hidden"></div>
                   <div id="lightSourcesList" class="compact-list"></div>
                 </div>
               </div>
 
               <div class="tui-panel side-panel">
                 <div class="tui-panel-header">
-                  Efectos
+                  Efectos <span id="effectsCount" class="tui-count"></span>
                   <button type="button" class="panel-add-btn" data-open-modal="effectModal" title="Añadir efecto">+</button>
                 </div>
                 <div class="tui-panel-content">
@@ -185,15 +194,11 @@
               <section id="combatView" class="view">
                 <div class="tui-panel compact-panel">
                   <div class="tui-panel-header">
-                    Combate
+                    Combate <span id="combatCount" class="tui-count"></span>
                     <button type="button" class="panel-add-btn" data-open-modal="addCombatantModal" title="Añadir combatiente">+</button>
                   </div>
                   <div class="tui-panel-content compact-combat">
-                    <div class="combat-meta">
-                      <span id="combatRoundValue" class="initiative-pill">Ronda 0</span>
-                      <span id="combatTurnValue" class="initiative-pill">Sin combate activo</span>
-                      <span id="combatSelectedValue" class="initiative-pill">Sin selección</span>
-                    </div>
+                    <div id="initiativeRail" class="initiative-rail hidden"></div>
                     <div id="combatantsList" class="compact-list"></div>
                     <div id="combatStartActions" class="action-list encounter-actions hidden">
                       <button id="startCombatManualBtn" class="tui-button white-255 black-255-text btn-primary">Iniciar combate</button>
@@ -224,15 +229,15 @@
                 </div>
               </section>
             </main>
-          </div>
 
-          <div class="tui-panel log-panel">
-            <div class="tui-panel-header">
-              Log
-              <button type="button" class="panel-add-btn" id="logExpandBtn" title="Ver log completo">⤢</button>
-            </div>
-            <div class="tui-panel-content">
-              <div id="sessionLog" class="session-log"></div>
+            <div class="tui-panel log-panel">
+              <div class="tui-panel-header">
+                Log
+                <button type="button" class="panel-add-btn" id="logExpandBtn" title="Ver log completo">⤢</button>
+              </div>
+              <div class="tui-panel-content">
+                <div id="sessionLog" class="session-log"></div>
+              </div>
             </div>
           </div>
 
@@ -241,15 +246,10 @@
             <span class="strip-divider">│</span>
             <span>F2 Guardar</span>
             <span class="strip-divider">│</span>
-            <span>F3 Campaña</span>
-            <span class="strip-divider">│</span>
-            <span>F4 Personaje</span>
-            <span class="strip-divider">│</span>
             <span>F5 Dados</span>
             <span class="strip-divider">│</span>
-            <span>F6 Tablas</span>
-            <span class="strip-divider">│</span>
             <span>F10 Menú</span>
+            <span id="lastSavedIndicator" class="statusbar-save-indicator">Sin guardar</span>
           </div>
         </fieldset>
       </div>
@@ -258,26 +258,32 @@
     <div id="modalOverlap" class="tui-overlap"></div>
 
     <div id="aboutModal" class="tui-modal">
-      <div class="tui-window modal-window white-168 black-255-text">
+      <div class="tui-window modal-window modal-window--medium white-168 black-255-text">
         <fieldset class="tui-fieldset">
           <legend>Acerca de</legend>
           <button type="button" class="tui-fieldset-button" data-close-modal title="Cerrar">X</button>
           <div class="modal-body about-modal-body">
-            <pre class="about-logo">     ██████╗ ███████╗██████╗
-[ ] ██╔═══██╗██╔════╝██╔══██╗
-    ██║   ██║███████╗██████╔╝ [ ]
-    ██║   ██║╚════██║██╔══██╗
-[ ] ╚██████╔╝███████║██║  ██║
-     ╚═════╝ ╚══════╝╚═╝  ╚═╝  [ ]</pre>
+            <pre class="about-logo"> ██████╗ ███████╗██████╗ 
+██╔═══██╗██╔════╝██╔══██╗
+██║   ██║███████╗██████╔╝
+██║   ██║╚════██║██╔══██╗
+╚██████╔╝███████║██║  ██║
+ ╚═════╝ ╚══════╝╚═╝  ╚═╝</pre>
             <div class="about-title">OSR MANAGER</div>
             <div class="about-facts">
-              <div>Versión: 0.1.0</div>
+              <div>Versión: 0.2.0</div>
               <div>Esquema de datos: v1</div>
-              <div>Autor: Toni Ruiz — <a href="https://github.com/toniruiz" target="_blank" rel="noopener noreferrer">GitHub</a></div>
+              <div>Autor: Toni Ruiz [Favashi]</div>
+              <div>Repositorio: <a href="https://github.com/Favashi/osr-manager" target="_blank" rel="noopener noreferrer">GitHub</a></div>
             </div>
+            <label class="tui-checkbox about-startup-checkbox">No mostrar al iniciar
+              <input type="checkbox" id="aboutHideOnStartupInput" />
+              <span></span>
+            </label>
             <div class="modal-actions">
               <button type="button" class="tui-button white-255 black-255-text btn-primary" data-close-modal>Continuar</button>
             </div>
+            <div class="tui-popup-footer">Esc Cerrar</div>
           </div>
         </fieldset>
       </div>
@@ -409,19 +415,90 @@
     </div>
 
     <div id="diceModal" class="tui-modal">
-      <div class="tui-window modal-window white-168 black-255-text">
+      <div class="tui-window modal-window modal-window-wide white-168 black-255-text">
         <fieldset class="tui-fieldset">
           <legend>Dados</legend>
           <button type="button" class="tui-fieldset-button" data-close-modal title="Cerrar">X</button>
           <div class="modal-body">
             <div class="form-field compact-field">
               <label>Expresión</label>
-              <input id="diceExpressionInput" class="tui-input" type="text" placeholder="1d20" value="1d20" />
+              <div class="dice-expression-row">
+                <input id="diceExpressionInput" class="tui-input" type="text" placeholder="1d20" value="1d20" />
+                <button type="button" id="diceExpressionClearBtn" class="tui-button white-255 black-255-text" title="Limpiar expresión">Limpiar</button>
+              </div>
             </div>
-            <div id="diceResult" class="summary-box">Introduce una expresión y tira.</div>
+
+            <div class="dice-quantity-row">
+              <span>Cantidad:</span>
+              <button type="button" id="diceQtyMinusBtn" class="tui-button white-255 black-255-text dice-qty-btn">-</button>
+              <span id="diceQtyValue" class="dice-qty-value">1</span>
+              <button type="button" id="diceQtyPlusBtn" class="tui-button white-255 black-255-text dice-qty-btn">+</button>
+            </div>
+
+            <div class="dice-face-grid">
+              <button type="button" class="tui-button white-255 black-255-text" data-dice-face="4">d4</button>
+              <button type="button" class="tui-button white-255 black-255-text" data-dice-face="6">d6</button>
+              <button type="button" class="tui-button white-255 black-255-text" data-dice-face="8">d8</button>
+              <button type="button" class="tui-button white-255 black-255-text" data-dice-face="10">d10</button>
+              <button type="button" class="tui-button white-255 black-255-text" data-dice-face="12">d12</button>
+              <button type="button" class="tui-button white-255 black-255-text" data-dice-face="20">d20</button>
+              <button type="button" class="tui-button white-255 black-255-text" data-dice-face="100">d100</button>
+              <button type="button" class="tui-button white-255 black-255-text" data-dice-face="66">d66</button>
+            </div>
+            <div class="dice-face-grid dice-face-grid-minor">
+              <button type="button" class="tui-button white-255 black-255-text" data-dice-face="2">d2</button>
+              <button type="button" class="tui-button white-255 black-255-text" data-dice-face="3">d3</button>
+              <button type="button" class="tui-button white-255 black-255-text" data-dice-modifier="-1">-1</button>
+              <button type="button" class="tui-button white-255 black-255-text" data-dice-modifier="1">+1</button>
+            </div>
+
             <div class="modal-actions">
               <button id="diceRollBtn" class="tui-button white-255 black-255-text btn-primary">Tirar</button>
+              <button id="diceHelpBtn" type="button" class="tui-button white-255 black-255-text">Ayuda</button>
+            </div>
+
+            <div id="diceResult" class="summary-box dice-result">Introduce una expresión y tira.</div>
+
+            <div class="dice-history-header">
+              <span>Historial</span>
+              <button id="diceHistoryClearBtn" type="button" class="tui-button white-255 black-255-text dice-history-clear-btn">Limpiar historial</button>
+            </div>
+            <div id="diceHistoryList" class="compact-list dice-history-list">
+              <div class="empty-row">Sin tiradas todavía.</div>
+            </div>
+
+            <div class="modal-actions">
               <button type="button" class="tui-button white-255 black-255-text" data-close-modal>Cerrar</button>
+            </div>
+            <div class="tui-popup-footer">Enter Tirar │ Esc Cerrar</div>
+          </div>
+        </fieldset>
+      </div>
+    </div>
+
+    <div id="diceHelpModal" class="tui-modal">
+      <div class="tui-window modal-window white-168 black-255-text">
+        <fieldset class="tui-fieldset">
+          <legend>Ayuda · Dados</legend>
+          <button type="button" class="tui-fieldset-button" data-close-modal title="Cerrar">X</button>
+          <div class="modal-body">
+            <div class="summary-box">
+              NdS: cantidad + dado (2d6, d20)<br>
+              + - * /: aritmética, con precedencia normal<br>
+              ( ): agrupar<br>
+              &lt;= &gt;= &lt; &gt; = ==: comparación (éxito/fallo)<br>
+              d%: alias de d100 · d66: tabla (decenas+unidades)
+            </div>
+            <div class="summary-box">
+              Ejemplos:<br>
+              2d6+3<br>
+              3d6*10<br>
+              (2d4+1)*100<br>
+              1d100&lt;=35<br>
+              d66
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="tui-button white-255 black-255-text btn-primary" data-close-modal>Cerrar</button>
             </div>
           </div>
         </fieldset>
@@ -434,6 +511,42 @@
           <legend>Tablas</legend>
           <button type="button" class="tui-fieldset-button" data-close-modal title="Cerrar">X</button>
           <div id="tablesModalBody" class="modal-body"></div>
+        </fieldset>
+      </div>
+    </div>
+
+    <div id="xpCalculatorModal" class="tui-modal">
+      <div class="tui-window modal-window modal-window--medium white-168 black-255-text">
+        <fieldset class="tui-fieldset">
+          <legend>Calculadora de PX</legend>
+          <button type="button" class="tui-fieldset-button" data-close-modal title="Cerrar">X</button>
+          <div class="modal-body">
+            <div class="two-up">
+              <div class="form-field compact-field">
+                <label>PX por monstruos</label>
+                <input id="xpMonsterInput" class="tui-input" type="number" min="0" value="0" />
+              </div>
+              <div class="form-field compact-field">
+                <label>PX por tesoro</label>
+                <input id="xpTreasureInput" class="tui-input" type="number" min="0" value="0" />
+              </div>
+              <div class="form-field compact-field">
+                <label>Otros PX</label>
+                <input id="xpOtherInput" class="tui-input" type="number" min="0" value="0" />
+              </div>
+              <div class="form-field compact-field">
+                <label>Personajes</label>
+                <input id="xpPartySizeInput" class="tui-input" type="number" min="0" value="0" />
+              </div>
+            </div>
+            <button id="xpUseCurrentPartyBtn" type="button" class="tui-button white-255 black-255-text">Usar grupo actual</button>
+            <div id="xpResultBox" class="summary-box">Total: 0 PX</div>
+            <div class="modal-actions">
+              <button id="xpCopyResultBtn" type="button" class="tui-button white-255 black-255-text">Copiar resultado</button>
+              <button type="button" class="tui-button white-255 black-255-text btn-primary" data-close-modal>Cerrar</button>
+            </div>
+            <div class="tui-popup-footer">Esc Cerrar</div>
+          </div>
         </fieldset>
       </div>
     </div>
@@ -457,6 +570,7 @@
               <button id="rulesetApplyBtn" class="tui-button white-255 black-255-text btn-primary">Aplicar</button>
               <button type="button" class="tui-button white-255 black-255-text" data-close-modal>Cancelar</button>
             </div>
+            <div class="tui-popup-footer">Esc Cancelar</div>
           </div>
         </fieldset>
       </div>
@@ -584,6 +698,45 @@
       </div>
     </div>
 
+    <div id="newCampaignModal" class="tui-modal">
+      <div class="tui-window modal-window white-168 black-255-text">
+        <fieldset class="tui-fieldset">
+          <legend>Nueva campaña</legend>
+          <button type="button" class="tui-fieldset-button" data-close-modal title="Cerrar">X</button>
+          <div class="modal-body">
+            <div class="form-field compact-field">
+              <label>Nombre</label>
+              <input id="newCampaignNameInput" class="tui-input" type="text" placeholder="Nombre de la campaña" />
+            </div>
+            <div class="form-field compact-field">
+              <label>Reglas</label>
+              <select id="newCampaignRulesetSelect" class="tui-input"></select>
+            </div>
+            <div class="modal-actions">
+              <button id="newCampaignConfirmCreateBtn" class="tui-button white-255 black-255-text btn-primary">Crear</button>
+              <button type="button" class="tui-button white-255 black-255-text" data-close-modal>Cancelar</button>
+            </div>
+          </div>
+        </fieldset>
+      </div>
+    </div>
+
+    <div id="replaceCampaignConfirmModal" class="tui-modal">
+      <div class="tui-window modal-window white-168 black-255-text">
+        <fieldset class="tui-fieldset">
+          <legend>Confirmar</legend>
+          <button type="button" class="tui-fieldset-button" data-close-modal title="Cerrar">X</button>
+          <div class="modal-body">
+            <div id="replaceCampaignConfirmText" class="summary-box">¿Sustituir la campaña activa?</div>
+            <div class="modal-actions">
+              <button id="replaceCampaignConfirmBtn" class="tui-button white-255 black-255-text btn-primary">Continuar</button>
+              <button type="button" class="tui-button white-255 black-255-text" data-close-modal>Cancelar</button>
+            </div>
+          </div>
+        </fieldset>
+      </div>
+    </div>
+
     <div id="explorationActionsModal" class="tui-modal">
       <div class="tui-window modal-window white-168 black-255-text">
         <fieldset class="tui-fieldset">
@@ -647,7 +800,7 @@
     </div>
 
     <div id="logModal" class="tui-modal">
-      <div class="tui-window modal-window modal-window-wide white-168 black-255-text">
+      <div class="tui-window modal-window modal-window--large white-168 black-255-text">
         <fieldset class="tui-fieldset">
           <legend>Log completo</legend>
           <button type="button" class="tui-fieldset-button" data-close-modal title="Cerrar">X</button>
@@ -816,7 +969,16 @@
           <legend>Ayuda</legend>
           <button type="button" class="tui-fieldset-button" data-close-modal title="Cerrar">X</button>
           <div class="modal-body">
-            <div class="summary-box">Guarda la campaña, mueve al grupo, genera encuentros y usa las fases del modo activo.</div>
+            <div class="compact-list">
+              <div class="list-item"><strong>Modos:</strong> cambia entre Mazmorra, Exterior y Combate con las pestañas del menú superior. Cada modo tiene sus propias fases y acciones en la barra de estado.</div>
+              <div class="list-item"><strong>Grupo:</strong> añade personajes con el botón + del panel Grupo; haz clic en uno para ver o editar su ficha.</div>
+              <div class="list-item"><strong>Mazmorra:</strong> registra sala/nivel, gestiona luz y efectos activos, tira dados de exploración con F5.</div>
+              <div class="list-item"><strong>Exterior:</strong> viaja por la rejilla hexagonal (F3 o el botón Viajar), consulta terreno y genera encuentros.</div>
+              <div class="list-item"><strong>Combate:</strong> inicia combate, tira iniciativa, usa N para pasar turno y aplica daño/curación/estados a cada combatiente.</div>
+              <div class="list-item"><strong>Guardar:</strong> F2 guarda en el navegador; usa Archivo → Exportar/Importar para mover la campaña entre dispositivos.</div>
+              <div class="list-item">Consulta <button type="button" class="link-button" data-open-modal="shortcutsModal" data-close-modal>Atajos de teclado</button> para el listado completo.</div>
+              <div class="list-item">Más detalle en el <a href="https://github.com/Favashi/osr-manager" target="_blank" rel="noopener noreferrer">repositorio de GitHub</a>.</div>
+            </div>
             <div class="modal-actions">
               <button type="button" class="tui-button white-255 black-255-text btn-primary" data-close-modal>Cerrar</button>
             </div>
@@ -866,6 +1028,7 @@
     <script src="js/rules/custom.js"></script>
     <script src="js/state.js"></script>
     <script src="js/dice.js"></script>
+    <script src="js/ui-list.js"></script>
     <script src="js/dungeon.js"></script>
     <script src="js/combat.js"></script>
     <script src="js/wilderness.js"></script>

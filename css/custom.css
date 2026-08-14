@@ -59,13 +59,24 @@ select {
   align-items: safe center;
   justify-content: safe center;
   padding: 10px;
-  background: #000;
+  /* Textura de "escritorio" retro DOS/EGA: micro-dither muy sutil sobre
+     negro azulado. background-color de respaldo por si el gradient no
+     renderiza; el tile de 4px no cambia con la resolución/DPI. */
+  background-color: #05060c;
+  background-image:
+    repeating-linear-gradient(45deg, rgba(70, 90, 140, 0.05) 0px, rgba(70, 90, 140, 0.05) 1px, transparent 1px, transparent 4px),
+    repeating-linear-gradient(-45deg, rgba(70, 90, 140, 0.05) 0px, rgba(70, 90, 140, 0.05) 1px, transparent 1px, transparent 4px);
+  background-size: 4px 4px;
   overflow: auto;
 }
 
 .app-window {
-  width: 960px;
-  max-width: 90vw;
+  /* Normal: ancho fijo razonable, altura según contenido (con tope
+     generoso). Un ratio 16:10 estricto (≈800×500) resultó demasiado bajo
+     para el contenido real y forzaba scroll — mejor ancho fijo + alto
+     libre hasta max-height. Solo .maximized (abajo) usa el viewport. */
+  width: min(920px, 100%);
+  max-height: 92vh;
   margin: auto;
   padding: 0;
   display: flex;
@@ -74,16 +85,32 @@ select {
   box-shadow: 10px 10px black;
   border: 2px solid #fff;
   transition: all 0.15s ease;
-  min-height: 600px;
-  max-height: 90vh;
   overflow: hidden;
 }
 
 .app-window.maximized {
-  width: 98vw;
-  max-width: 98vw;
-  height: 95vh;
-  max-height: 95vh;
+  /* Tope ~1920×1080 (no un mínimo): en monitores 2K/4K se queda ahí y se
+     centra; en viewports menores usa el espacio real disponible. */
+  width: min(1920px, 98vw);
+  max-width: min(1920px, 98vw);
+  height: min(1080px, 95vh);
+  max-height: min(1080px, 95vh);
+}
+
+/* Normal (~920px de ancho): reducir gaps/padding antes que permitir
+   overflow. Ningún atajo ni información desaparece, solo se compacta. */
+.app-window:not(.maximized) .status-strip {
+  gap: 8px;
+  padding: 4px 6px;
+}
+
+.app-window:not(.maximized) .dungeon-clock {
+  letter-spacing: 0;
+}
+
+.app-window:not(.maximized) .app-statusbar {
+  gap: 6px;
+  padding: 4px 6px;
 }
 
 .app-fieldset {
@@ -91,6 +118,7 @@ select {
   border: none;
   padding: 0;
   min-height: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -272,6 +300,12 @@ select {
   border-bottom: none;
 }
 
+.dos-menu-separator {
+  height: 1px;
+  margin: 3px 6px;
+  background: rgba(0, 0, 0, 0.35);
+}
+
 .tui-panel {
   border: 1px solid rgba(255, 255, 255, 0.35);
   min-width: 0;
@@ -312,6 +346,7 @@ select {
   justify-content: space-between;
   gap: 10px;
   width: auto;
+  min-width: 0;
   margin: 0 8px 10px;
   padding: 5px 10px;
   background: rgba(0, 0, 0, 0.2);
@@ -328,6 +363,11 @@ select {
 }
 
 #campaignBarLabel {
+  /* min-width:0 es imprescindible: sin él, un flex item con
+     white-space:nowrap nunca encoge por debajo de su contenido y el
+     ellipsis no llega a activarse — el nombre largo empuja la barra fuera
+     de la ventana en vez de truncarse. */
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -382,9 +422,26 @@ select {
 .workspace-grid {
   display: grid;
   grid-template-columns: 340px minmax(0, 1fr);
+  grid-template-areas:
+    "sidebar main"
+    "log     log";
   gap: 12px;
   align-items: start;
   margin: 0 8px;
+  min-height: 0;
+}
+
+/* Solo en maximizado .app-window tiene una altura REAL definida (95vh), así
+   que solo ahí puede sobrar espacio vertical que absorber. En normal la
+   ventana mide lo que mide su contenido — darle flex:1 aquí también
+   generaba un hueco vacío entre los paneles y el Log sin motivo. */
+.app-window.maximized .workspace-grid {
+  flex: 1;
+  /* La fila "main" (sidebar+principal+secundaria) se queda con TODO el
+     espacio sobrante (1fr); la fila "log" mide solo su contenido (auto).
+     Sin esto, el espacio extra del flex:1 se quedaba como hueco vacío
+     DESPUÉS del Log en vez de empujarlo pegado abajo. */
+  grid-template-rows: minmax(0, 1fr) auto;
 }
 
 .side-column,
@@ -392,6 +449,18 @@ select {
   display: grid;
   gap: 12px;
   min-width: 0;
+}
+
+.side-column {
+  grid-area: sidebar;
+}
+
+.main-column {
+  grid-area: main;
+}
+
+.log-panel {
+  grid-area: log;
 }
 
 .side-panel {
@@ -402,6 +471,13 @@ select {
   position: relative;
   background: rgb(168, 168, 168) !important;
   color: #000;
+}
+
+/* Contador reutilizable de cabecera (Grupo [4], Efectos [2]...). Preparado
+   también para futuras cabeceras del Codex (Monstruos [214]...). */
+.tui-count {
+  opacity: 0.7;
+  font-weight: normal;
 }
 
 .panel-add-btn {
@@ -442,7 +518,6 @@ select {
   margin-bottom: 0;
 }
 
-.empty-row,
 .log-entry,
 .summary-box,
 .combatant-row {
@@ -452,11 +527,30 @@ select {
   padding: 4px 8px;
 }
 
+/* Patrón común de estado vacío: texto atenuado y compacto, sin caja. Nombre
+   .tui-empty-state pensado para reutilizar en el Codex; .empty-row sigue
+   funcionando igual (alias) para no tocar el HTML/JS ya existente. */
+.empty-row,
+.tui-empty-state {
+  color: rgba(255, 255, 255, 0.6);
+  padding: 2px 4px;
+}
+
 .list-item {
   background: transparent;
   border: none;
   color: #fff;
   padding: 2px 2px;
+}
+
+.link-button {
+  background: transparent;
+  border: none;
+  color: var(--mode-wilderness);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
 }
 
 .combatant-row {
@@ -471,6 +565,13 @@ select {
   font-weight: bold;
   opacity: 0.75;
   cursor: default;
+  /* Cabecera fija durante el scroll interno de la tabla. Fondo sólido
+     propio (no heredado) para que las filas que pasan por debajo no se
+     transparenten. */
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: rgb(0, 0, 168);
 }
 
 .combatant-row .col-ini,
@@ -491,6 +592,13 @@ select {
   background: rgb(255, 255, 0) !important;
   color: #000 !important;
   border-color: #000;
+}
+
+/* Actor con el turno actual: indicador discreto (glifo), nunca el mismo
+   amarillo sólido de la selección — son conceptos distintos. */
+.tui-actor-marker {
+  font-weight: bold;
+  opacity: 0.85;
 }
 
 .combatant-row.defeated,
@@ -540,6 +648,15 @@ select {
 .party-row-header {
   font-weight: bold;
   opacity: 0.75;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: rgb(0, 0, 168);
+}
+
+#partyList {
+  max-height: 200px;
+  overflow-y: auto;
 }
 
 .party-name {
@@ -548,9 +665,13 @@ select {
   white-space: nowrap;
 }
 
-.party-class,
+.party-class {
+  white-space: nowrap;
+}
+
 .party-ac {
   white-space: nowrap;
+  text-align: right;
 }
 
 .party-hp {
@@ -693,6 +814,7 @@ select {
   gap: 14px;
   align-items: center;
   width: auto;
+  min-width: 0;
   margin: 0 8px 12px;
   padding: 6px 10px;
   background: rgba(0, 0, 0, 0.15);
@@ -742,49 +864,49 @@ select {
   min-height: 0;
 }
 
-.combat-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.initiative-pill {
-  display: inline-block;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid var(--current-mode-color, rgba(255, 255, 255, 0.5));
-  padding: 2px 6px;
-}
-
 #combatantsList {
   max-height: 260px;
   overflow-y: auto;
 }
 
 .log-panel {
+  /* Sin flex:1 a propósito: el panel Log NO debe crecer para rellenar el
+     alto de la ventana (esa era la causa de que en pantallas altas se
+     estirara). Su altura la determina el contenido: cabecera +
+     .session-log, que tiene una altura fija de ~5 filas (ver abajo). */
   min-height: 0;
   margin: 12px 8px 0;
-  flex: 1;
   display: flex;
   flex-direction: column;
 }
 
 .log-panel .tui-panel-content {
-  flex: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
 }
 
 .session-log {
-  flex: 1;
-  min-height: 90px;
-  max-height: none;
+  /* Override deliberado de "display: grid" (heredado de la regla
+     compartida con .compact-list/.action-list): en grid, cada .log-entry
+     es un grid item con align-self "stretch" por defecto, así que se
+     repartía el alto sobrante de la fila en vez de quedarse en su
+     contenido. En flex-column, sin flex-grow, cada entrada solo ocupa la
+     altura de su propio texto. */
+  display: flex;
+  flex-direction: column;
+  /* Altura fija ≈ 5 entradas de una línea: line-height de .log-entry
+     (1.45em) + su padding/borde vertical (4px arriba/abajo + 2px de borde
+     arriba/abajo = 12px) por cada una de las 5 filas, más los 4 huecos de
+     6px entre ellas (gap heredado de la regla compartida con
+     .compact-list/.action-list). A partir de la 6ª entrada, scroll. */
+  height: calc(5 * (1.45em + 12px) + 4 * 6px);
   overflow-y: auto;
 }
 
 .log-entry {
   display: block;
+  flex: 0 0 auto;
   line-height: 1.45;
 }
 
@@ -793,22 +915,35 @@ select {
 }
 
 .app-statusbar {
+  /* Antes "overflow:hidden" recortaba en seco lo que no cabía (el "F10
+     Menú" cortado). flex-wrap deja que pase a una segunda línea si hace
+     falta en vez de perder contenido; min-width:0 permite que el propio
+     footer encoja dentro de la ventana en vez de forzarla a ensancharse. */
   width: auto;
+  min-width: 0;
   margin: 8px 0 0;
   background: rgb(168, 168, 168);
   color: #000;
   border-top: 2px solid #000;
   padding: 4px 8px;
   display: flex;
+  flex-wrap: wrap;
+  row-gap: 2px;
   align-items: center;
-  overflow: hidden;
-  white-space: nowrap;
+  overflow: visible;
 }
 
 .app-statusbar span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.statusbar-save-indicator {
+  margin-left: auto;
+  padding-left: 12px;
+  flex-shrink: 0;
+  opacity: 0.85;
 }
 
 .tui-overlap {
@@ -836,6 +971,11 @@ select {
   display: flex !important;
 }
 
+/* Patrón común de popup: 3 tamaños. small (por defecto, .modal-window) para
+   confirmaciones/inputs breves; --medium para herramientas sin listas
+   grandes (Dados/PX/Reglas/Acerca de); --large reservado para futuras
+   herramientas de listado (Codex/Tablas/Compendio) — cabe en normal
+   (~800px) sin desbordar y no crece indefinidamente en maximizado. */
 .modal-window {
   display: block;
   width: 380px;
@@ -845,9 +985,15 @@ select {
   overflow-y: auto;
 }
 
-.modal-window-wide {
+.modal-window-wide,
+.modal-window--medium {
   width: 640px;
   max-width: 94vw;
+}
+
+.modal-window--large {
+  width: min(1000px, 92vw);
+  max-height: 85vh;
 }
 
 .modal-body {
@@ -864,7 +1010,24 @@ select {
   margin-top: 4px;
 }
 
+/* Pie de atajos reutilizable de popup: una línea discreta, solo los atajos
+   relevantes de ESE popup (no un listado genérico repetido). */
+.tui-popup-footer {
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+  font-size: 0.85em;
+  opacity: 0.7;
+  text-align: center;
+  white-space: nowrap;
+}
+
 .log-modal-body {
+  /* Mismo motivo que .session-log: sin este override hereda
+     "display: grid" de .modal-body y las entradas se estirarían también
+     aquí, en el log expandido. */
+  display: flex;
+  flex-direction: column;
   max-height: 60vh;
   overflow-y: auto;
 }
@@ -886,10 +1049,9 @@ select {
 }
 
 .about-logo {
-  display: inline-block;
   margin: 0 0 8px;
   line-height: 1.15;
-  text-align: left;
+  text-align: center;
   font-size: 0.6em;
 }
 
@@ -903,7 +1065,13 @@ select {
   display: grid;
   gap: 2px;
   text-align: left;
+  line-height: 1.4;
   margin: 8px 0 12px;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  max-height: calc(5 * 1.4em + 4 * 2px);
+  overflow-y: auto;
 }
 
 .about-facts a {
@@ -915,12 +1083,223 @@ select {
   color: rgb(0, 0, 168);
 }
 
+.about-startup-checkbox {
+  margin: 0 0 8px;
+  font-size: 0.85em;
+}
+
 @media (max-width: 980px) {
   .workspace-grid,
   .two-col {
     display: grid;
     grid-template-columns: 1fr;
   }
+
+  .workspace-grid {
+    grid-template-areas:
+      "sidebar"
+      "main"
+      "log";
+  }
+}
+
+/* Dungeon Clocks: glifo compacto junto al valor numérico ya existente en
+   el status strip. Puramente informativo, no sustituye el número. */
+.dungeon-clock {
+  opacity: 0.75;
+  letter-spacing: 1px;
+}
+
+/* Periodo del día: descriptor derivado de la hora, sin implicar luz solar
+   ni reglas. Texto discreto junto a la hora. */
+.day-period {
+  opacity: 0.7;
+  text-transform: uppercase;
+  font-size: 0.85em;
+}
+
+/* Aviso global de oscuridad en el panel Luz. Ámbar de advertencia (no
+   rojo: no es un peligro real, es un aviso de procedimiento). */
+.lighting-status {
+  font-weight: bold;
+  color: rgb(255, 176, 0);
+  border: 1px solid rgb(255, 176, 0);
+  padding: 3px 6px;
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+/* Initiative Rail: deriva del orden real del tracker. El actor con el
+   turno actual usa el mismo amarillo de foco/selección que el resto de la
+   app; derrotados/retirados quedan atenuados igual que en la tabla. */
+.initiative-rail {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 4px;
+  padding: 4px 6px;
+  margin-bottom: 8px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  white-space: nowrap;
+}
+
+.initiative-rail-item {
+  padding: 1px 6px;
+  border: 1px solid transparent;
+}
+
+.initiative-rail-item.current {
+  background: rgb(255, 255, 0);
+  color: #000;
+  font-weight: bold;
+  border-color: #000;
+}
+
+.initiative-rail-item.inactive {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+.initiative-rail-sep,
+.initiative-rail-ellipsis {
+  opacity: 0.6;
+}
+
+/* Encounter Summary: cabecera clara + campos realmente disponibles. */
+.encounter-header {
+  font-weight: bold;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+
+.encounter-fields {
+  display: grid;
+  gap: 2px;
+}
+
+.encounter-fields > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.encounter-field-label {
+  opacity: 0.75;
+}
+
+.encounter-extra {
+  margin-top: 4px;
+  opacity: 0.85;
+}
+
+/* Lanzador de Dados 2.0 */
+.dice-quantity-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.dice-qty-btn {
+  min-width: 32px;
+  padding: 1px 6px;
+}
+
+.dice-qty-value {
+  min-width: 24px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.dice-face-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.dice-face-grid-minor {
+  opacity: 0.8;
+}
+
+.dice-result {
+  line-height: 1.4;
+}
+
+.dice-comparison-success {
+  color: rgb(0, 255, 255);
+  font-weight: bold;
+}
+
+.dice-comparison-fail {
+  color: rgb(255, 176, 0);
+  font-weight: bold;
+}
+
+.dice-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 8px 0 4px;
+  opacity: 0.85;
+}
+
+.dice-history-list {
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.dice-history-item {
+  display: grid;
+  grid-template-columns: 48px 1fr 56px;
+  gap: 8px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.dice-history-item:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.dice-history-time {
+  opacity: 0.65;
+}
+
+.dice-history-total {
+  text-align: right;
+  font-weight: bold;
+}
+
+.dice-expression-row {
+  display: flex;
+  gap: 6px;
+}
+
+.dice-expression-row input {
+  width: auto;
+  flex: 1;
+}
+
+.dice-expression-row button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.dice-history-clear-btn {
+  padding: 1px 8px;
+}
+
+/* Barra de estado de Combate: nombre de "Actúa" truncado si es muy largo,
+   sin ensanchar la barra ni el layout general. */
+.combat-actor-name {
+  display: inline-block;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
 }
 
 @media (max-width: 640px) {
@@ -932,4 +1311,58 @@ select {
   .two-up {
     grid-template-columns: 1fr;
   }
+
+  .dice-face-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Layout ancho: activado ÚNICAMENTE por el estado real de maximización
+   (.app-window.maximized, ya gestionado por windowSizeBtn en app.js), NUNCA
+   por el ancho del viewport. Un monitor grande con la app sin maximizar se
+   queda en el layout normal (<=800px); solo maximizar activa esto.
+   Reutiliza los paneles ya existentes vía grid-area/grid-template-columns;
+   ningún nodo se duplica ni se mueve por JS. El Log nunca es una columna:
+   sigue siendo la fila "log" a todo el ancho, tanto normal como maximizado. */
+.app-window.maximized .workspace-grid {
+  /* Proporciones fluidas (no columnas congeladas): la izquierda crece con
+     la ventana en vez de quedarse en un ancho fijo. */
+  grid-template-columns: minmax(280px, 24%) minmax(0, 1fr);
+}
+
+/* Mazmorra: Acciones (principal) | Encuentro (secundaria). */
+.app-window.maximized #dungeonView {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 34%);
+}
+
+/* Exterior: Acciones/Estado (principal, ya era .two-col) a la izquierda;
+   Encuentro y Hex actual apilados como columna secundaria a la derecha. */
+.app-window.maximized #wildernessView {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 34%);
+  grid-template-areas:
+    "principal top"
+    "principal bottom";
+}
+
+.app-window.maximized #wildernessView > *:nth-child(1) {
+  grid-area: principal;
+}
+
+.app-window.maximized #wildernessView > *:nth-child(2) {
+  grid-area: top;
+}
+
+.app-window.maximized #wildernessView > *:nth-child(3) {
+  grid-area: bottom;
+}
+
+/* Combate: tabla de combatientes (principal) | Ronda/Acciones (secundaria,
+   apiladas verticalmente en vez de lado a lado). */
+.app-window.maximized #combatView {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 34%);
+  align-items: start;
+}
+
+.app-window.maximized #combatView > .two-col {
+  grid-template-columns: 1fr;
 }

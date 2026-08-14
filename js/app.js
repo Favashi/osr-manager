@@ -1,7 +1,7 @@
 (function () {
   const NS = (window.OSRApp = window.OSRApp || {});
 
-  let state = NS.createInitialState();
+  let state = NS.createEmptyCampaign();
   let currentMode = 'dungeon';
   let lastNonCombatMode = 'dungeon';
 
@@ -79,18 +79,70 @@
       '</div>';
   }
 
+  // Descriptor puramente visual de la hora del mundo — no implica luz solar
+  // ni afecta reglas. Franjas fijas por ahora (Ruleset Core no define
+  // todavía horarios propios); si algún día lo hace, esta es la única
+  // función a la que habría que enchufarlo.
+  function getDayPeriod(worldTime) {
+    const hour = worldTime.hour;
+    if (hour >= 20) return 'Noche';
+    if (hour >= 12) return 'Tarde';
+    if (hour >= 6) return 'Mañana';
+    return 'Madrugada';
+  }
+
+  // Estado global derivado (nunca guardado): iluminado si al menos una
+  // fuente está realmente encendida, no agotada y con duración > 0.
+  function getLightingState(state) {
+    const hasActiveLight = state.dungeon.lightSources.some(function (source) {
+      return !source.exhausted && source.lit && Number(source.durationRemaining) > 0;
+    });
+    return hasActiveLight ? 'lit' : 'dark';
+  }
+
+  // Clock TUI compacto y reutilizable para cualquier contador procedural con
+  // límite (encuentro, descanso, y en el futuro lo que haga falta).
+  // <=10 de intervalo: un segmento por unidad (●/○). >10: barra compacta de
+  // 10 segmentos proporcional (█/░); el número exacto siempre lo aporta el
+  // texto de al lado, nunca solo el glifo.
+  function renderClock(current, max) {
+    const safeMax = Math.max(1, Number(max) || 1);
+    const safeCurrent = Math.max(0, Math.min(safeMax, Number(current) || 0));
+    if (safeMax <= 10) {
+      return '●'.repeat(safeCurrent) + '○'.repeat(safeMax - safeCurrent);
+    }
+    const segments = 10;
+    const filled = Math.round((safeCurrent / safeMax) * segments);
+    return '█'.repeat(filled) + '░'.repeat(segments - filled);
+  }
+
   function isTypingTarget(event) {
     const tag = (event.target && event.target.tagName || '').toLowerCase();
     return tag === 'input' || tag === 'textarea' || tag === 'select';
+  }
+
+  // Patrón reutilizable: cuando la selección cambia por teclado, la fila
+  // activa debe seguir visible sin saltos bruscos. "nearest" solo mueve el
+  // scroll lo justo para que la fila entre en el contenedor, nunca recentra.
+  function scrollSelectedRowIntoView(listId) {
+    const list = document.getElementById(listId);
+    if (!list) return;
+    const selected = list.querySelector('.selected');
+    if (selected && typeof selected.scrollIntoView === 'function') {
+      selected.scrollIntoView({ block: 'nearest' });
+    }
   }
 
   function renderParty() {
     const list = document.getElementById('partyList');
     list.innerHTML = '';
 
+    const countEl = document.getElementById('partyCount');
+    if (countEl) countEl.textContent = '[' + state.party.length + ']';
+
     if (!state.party.length) {
       const empty = document.createElement('div');
-      empty.className = 'empty-row';
+      empty.className = 'tui-empty-state';
       empty.textContent = 'Ningún personaje.';
       list.appendChild(empty);
       return;
@@ -111,7 +163,7 @@
       item.className = 'party-row';
       const displayAc = NS.rules.getDisplayArmorClass(member, activeRuleset);
       item.innerHTML =
-        '<span class="party-name">' + escapeHtml(member.name) + '</span>' +
+        '<span class="party-name" title="' + escapeHtml(member.name) + '">' + escapeHtml(member.name) + '</span>' +
         '<span class="party-class">' + escapeHtml(classAbbrev(member.class)) + ' ' + (member.level || 1) + '</span>' +
         '<span class="party-ac">' + (displayAc != null ? displayAc : 10) + '</span>' +
         '<span class="party-hp">' + member.hpCurrent + '/' + member.hpMax + '</span>';
@@ -121,9 +173,12 @@
 
   function renderTime() {
     const worldTime = state.worldTime;
+    const period = getDayPeriod(worldTime);
     document.getElementById('dungeonTimeValue').textContent = formatClock(worldTime.hour, worldTime.minute);
+    document.getElementById('dungeonPeriodValue').textContent = period;
     document.getElementById('wildernessDayValue').textContent = worldTime.day;
     document.getElementById('wildernessHourValue').textContent = formatClock(worldTime.hour, worldTime.minute);
+    document.getElementById('wildernessPeriodValue').textContent = period;
   }
 
   function renderEncounterPanel(boxId, actionsId, startBtnId) {
@@ -142,9 +197,17 @@
       } else if (!hasEncounter) {
         box.textContent = encounter.summary || 'Ningún encuentro.';
       } else {
-        let html = '<strong>' + escapeHtml(encounter.entity || encounter.result) + '</strong> (' + encounter.quantity + ')<br>';
-        html += 'Distancia: ' + (encounter.distance || 0) + ' m';
-        if (encounter.reaction) html += '<br>' + escapeHtml(encounter.reaction);
+        // Solo campos que el Encounter realmente aporta hoy (cantidad,
+        // distancia, reacción/moral si el motor los tiró). Nada de
+        // sorpresa/hostilidad inventadas: eso llegará con su propio motor.
+        const name = encounter.entity || encounter.result || 'Encuentro';
+        let html = '<div class="encounter-header">! ' + encounter.quantity + ' ' + escapeHtml(name) + '</div>';
+        html += '<div class="encounter-fields">';
+        html += '<div><span class="encounter-field-label">Cantidad</span><span>' + encounter.quantity + '</span></div>';
+        html += '<div><span class="encounter-field-label">Distancia</span><span>' + (encounter.distance || 0) + ' m</span></div>';
+        html += '</div>';
+        if (encounter.reaction) html += '<div class="encounter-extra">' + escapeHtml(encounter.reaction) + '</div>';
+        if (encounter.morale) html += '<div class="encounter-extra">' + escapeHtml(encounter.morale) + '</div>';
         box.innerHTML = html;
       }
     }
@@ -154,13 +217,25 @@
 
   function renderDungeonSummary() {
     const rules = state.dungeon.rules;
+    const encounterInterval = rules.encounterEveryTurns || 2;
+    const restInterval = rules.restEveryTurns || 6;
+    const encounterCount = Math.min(state.dungeon.encounterCounter || 0, encounterInterval);
+    const restCount = Math.min(state.dungeon.restCounter || 0, restInterval);
+
     document.getElementById('dungeonTurnValue').textContent = state.dungeon.turn;
-    document.getElementById('dungeonEncounterValue').textContent =
-      Math.min(state.dungeon.encounterCounter || 0, rules.encounterEveryTurns || 2) + '/' + (rules.encounterEveryTurns || 2);
-    document.getElementById('dungeonRestValue').textContent =
-      Math.min(state.dungeon.restCounter || 0, rules.restEveryTurns || 6) + '/' + (rules.restEveryTurns || 6);
+    document.getElementById('dungeonEncounterValue').textContent = encounterCount + '/' + encounterInterval;
+    document.getElementById('dungeonRestValue').textContent = restCount + '/' + restInterval;
+    document.getElementById('dungeonEncounterClock').textContent = renderClock(encounterCount, encounterInterval);
+    document.getElementById('dungeonRestClock').textContent = renderClock(restCount, restInterval);
 
     renderEncounterPanel('encounterSummary', 'encounterActions', 'startCombatBtn');
+
+    const lightingStatus = document.getElementById('lightingStatus');
+    if (lightingStatus) {
+      const dark = getLightingState(state) === 'dark';
+      lightingStatus.classList.toggle('hidden', !dark);
+      lightingStatus.textContent = dark ? '! OSCURIDAD' : '';
+    }
 
     const lightList = document.getElementById('lightSourcesList');
     lightList.innerHTML = '';
@@ -196,6 +271,8 @@
     const activeEffects = state.dungeon.effects.filter(function (effect) {
       return effect.active;
     });
+    const effectsCountEl = document.getElementById('effectsCount');
+    if (effectsCountEl) effectsCountEl.textContent = '[' + activeEffects.length + ']';
     if (!activeEffects.length) {
       const empty = document.createElement('div');
       empty.className = 'empty-row';
@@ -259,13 +336,106 @@
     return parts.join(', ') || '-';
   }
 
+  // Deriva el rail del orden REAL del tracker (combat.combatants +
+  // currentTurn) — nunca un segundo array de iniciativa. Marca al
+  // combatiente con el turno actual, no al simplemente seleccionado en la
+  // tabla. Con muchos combatientes muestra una ventana alrededor del actor
+  // actual en vez de ensanchar la app.
+  function renderInitiativeRail(combat, rolled) {
+    const railEl = document.getElementById('initiativeRail');
+    if (!railEl) return;
+
+    if (!combat.active || !rolled || !combat.combatants.length) {
+      railEl.classList.add('hidden');
+      railEl.innerHTML = '';
+      return;
+    }
+
+    const combatants = combat.combatants;
+    const currentIndex = combat.currentTurn;
+    const WINDOW = 3;
+    let indexes = combatants.map(function (_, i) { return i; });
+    let hasBefore = false;
+    let hasAfter = false;
+    if (combatants.length > WINDOW * 2 + 1) {
+      const start = Math.max(0, currentIndex - WINDOW);
+      const end = Math.min(combatants.length - 1, currentIndex + WINDOW);
+      indexes = [];
+      for (let i = start; i <= end; i += 1) indexes.push(i);
+      hasBefore = start > 0;
+      hasAfter = end < combatants.length - 1;
+    }
+
+    const items = indexes.map(function (i) {
+      const combatant = combatants[i];
+      const classes = ['initiative-rail-item'];
+      if (i === currentIndex) classes.push('current');
+      if (combatant.defeated || combatant.withdrawn) classes.push('inactive');
+      return '<span class="' + classes.join(' ') + '">' + escapeHtml(combatant.name) + '</span>';
+    });
+
+    railEl.classList.remove('hidden');
+    railEl.innerHTML =
+      (hasBefore ? '<span class="initiative-rail-ellipsis">…</span>' : '') +
+      items.join('<span class="initiative-rail-sep">→</span>') +
+      (hasAfter ? '<span class="initiative-rail-ellipsis">…</span>' : '');
+  }
+
+  // Reutilizable para cualquier barra de estado de modo construida a partir
+  // de pares [etiqueta, valor] (por ahora solo Combate: Mazmorra/Exterior ya
+  // funcionan bien con su HTML fijo actual, no hace falta migrarlos).
+  function renderModeStatus(items) {
+    return items.map(function (item) {
+      return '<span><strong>' + item[0] + '</strong> ' + item[1] + '</span>';
+    }).join('<span class="strip-divider">│</span>');
+  }
+
+  // Responde "¿en qué punto está el combate?" (a diferencia del rail, que
+  // responde "¿quién va después?"). "Actúa" usa SIEMPRE currentTurn, nunca
+  // la selección manual de la tabla — son conceptos distintos a propósito.
+  function renderCombatStatusStrip(combat, active, rolled, current) {
+    const el = document.getElementById('combatStatusContent');
+    if (!el) return;
+
+    if (!active) {
+      el.innerHTML = 'Sin combate activo';
+      return;
+    }
+
+    const totalCombatants = combat.combatants.length;
+    const activeList = combat.combatants.filter(function (c) { return !c.defeated && !c.withdrawn; });
+    const activeCount = activeList.length;
+    const activosValue = activeCount + '/' + totalCombatants;
+
+    if (!rolled) {
+      el.innerHTML =
+        '<span><strong>Ronda</strong> ' + (combat.round || 0) + '</span>' +
+        '<span class="strip-divider">│</span>' +
+        '<span>Esperando iniciativa</span>' +
+        '<span class="strip-divider">│</span>' +
+        '<span><strong>Activos</strong> ' + activosValue + '</span>';
+      return;
+    }
+
+    let turnPosition = activeCount ? 1 : 0;
+    if (current) {
+      const idx = activeList.indexOf(current);
+      if (idx >= 0) turnPosition = idx + 1;
+    }
+    const actorName = current ? escapeHtml(current.name) : '—';
+
+    el.innerHTML = renderModeStatus([
+      ['Ronda', combat.round || 0],
+      ['Turno', turnPosition + '/' + activeCount],
+      ['Actúa', '<span class="combat-actor-name" title="' + actorName + '">' + actorName + '</span>'],
+      ['Activos', activosValue]
+    ]);
+  }
+
   function renderCombat() {
     const combat = state.combat;
     const list = document.getElementById('combatantsList');
     const startActions = document.getElementById('combatStartActions');
-    const roundValue = document.getElementById('combatRoundValue');
-    const turnValue = document.getElementById('combatTurnValue');
-    const selectedValue = document.getElementById('combatSelectedValue');
     const rollInitiativeBtn = document.getElementById('rollInitiativeBtn');
     const nextTurnBtnEl = document.getElementById('nextTurnBtn');
     const nextRoundBtnEl = document.getElementById('nextRoundBtn');
@@ -278,16 +448,17 @@
     const active = !!combat.active;
     const rolled = active && combat.round >= 1;
     const current = rolled ? combat.combatants[combat.currentTurn] : null;
-    const selected = active ? getCombatSelected() : null;
 
-    roundValue.textContent = 'Ronda ' + (combat.round || 0);
-    turnValue.textContent = current ? ('Turno: ' + current.name) : (active ? 'Esperando iniciativa' : 'Sin combate activo');
-    if (selectedValue) selectedValue.textContent = selected ? ('Seleccionado: ' + selected.name) : 'Sin selección';
+    renderInitiativeRail(combat, rolled);
+    renderCombatStatusStrip(combat, active, rolled, current);
+
+    const combatCountEl = document.getElementById('combatCount');
+    if (combatCountEl) combatCountEl.textContent = active ? '[' + combat.combatants.length + ']' : '';
 
     list.innerHTML = '';
 
     if (!active) {
-      list.innerHTML = '<div class="empty-row">No hay combate activo.</div>';
+      list.innerHTML = '<div class="tui-empty-state">No hay combate activo.</div>';
     } else if (!combat.combatants.length) {
       list.innerHTML = '<div class="empty-row">Sin combatientes.</div>';
     } else {
@@ -310,9 +481,10 @@
           (combatant.withdrawn ? ' withdrawn' : '');
         row.dataset.combatantId = combatant.id;
         const combatantAc = NS.rules.getDisplayArmorClass(combatant, activeCombatRuleset);
+        const isActor = rolled && index === combat.currentTurn;
         row.innerHTML =
           '<span class="col-ini">' + (combatant.initiative === null || combatant.initiative === undefined ? '-' : combatant.initiative) + '</span>' +
-          '<span class="col-name">' + (rolled && index === combat.currentTurn ? '&gt; ' : '') + escapeHtml(combatant.name) + '</span>' +
+          '<span class="col-name" title="' + escapeHtml(combatant.name) + '">' + (isActor ? '<span class="tui-actor-marker">▸</span> ' : '') + escapeHtml(combatant.name) + '</span>' +
           '<span class="col-ac">' + (combatantAc != null ? combatantAc : '-') + '</span>' +
           '<span class="col-hp">' + combatant.hpCurrent + '/' + combatant.hpMax + '</span>' +
           '<span class="col-status">' + escapeHtml(combatantStatusLabel(combatant)) + '</span>';
@@ -369,11 +541,39 @@
     const modeLabel = currentMode === 'dungeon' ? 'Mazmorra' : currentMode === 'wilderness' ? 'Exterior' : 'Combate';
     const label = document.getElementById('campaignBarLabel');
     const status = document.getElementById('campaignBarStatus');
-    if (label) label.textContent = state.campaign.name + ' · ' + state.campaign.adventure;
+    if (label) {
+      const displayName = state.campaign.name || 'Sin campaña';
+      label.textContent = state.campaign.adventure ? displayName + ' · ' + state.campaign.adventure : displayName;
+    }
     if (status) {
       status.innerHTML = 'Día ' + state.worldTime.day + ' · ' + formatClock(state.worldTime.hour, state.worldTime.minute) +
         ' · <span class="mode-name-accent">' + modeLabel + '</span>';
     }
+  }
+
+  // Representa una escritura real en localStorage (meta.lastSavedAt), nunca
+  // un simple cambio de estado en memoria. Sin segundos; fecha compacta si
+  // el último guardado no es de hoy.
+  function formatLastSaved(iso) {
+    if (!iso) return 'Sin guardar';
+    const date = new Date(iso);
+    if (isNaN(date.getTime())) return 'Sin guardar';
+    const now = new Date();
+    const hh = String(date.getHours()).padStart(2, '0');
+    const mm = String(date.getMinutes()).padStart(2, '0');
+    const sameDay = date.getFullYear() === now.getFullYear() &&
+      date.getMonth() === now.getMonth() &&
+      date.getDate() === now.getDate();
+    if (sameDay) return 'Guardado ' + hh + ':' + mm;
+    const dd = String(date.getDate()).padStart(2, '0');
+    const mo = String(date.getMonth() + 1).padStart(2, '0');
+    return 'Guardado ' + dd + '/' + mo + ' ' + hh + ':' + mm;
+  }
+
+  function updateLastSavedIndicator() {
+    const el = document.getElementById('lastSavedIndicator');
+    if (!el) return;
+    el.textContent = formatLastSaved(state.meta && state.meta.lastSavedAt);
   }
 
   function showMenu(panelName) {
@@ -407,12 +607,24 @@
     });
   }
 
+  // Criterio común de foco inicial: formulario/lista -> primer campo (que
+  // será el buscador si el popup tiene uno, al ser el primero del DOM);
+  // confirmación sin campos -> su acción principal (btn-primary), que ya es
+  // la que Enter dispara en los popups de confirmación existentes.
+  function focusFirstModalControl(modal) {
+    const field = modal.querySelector('input, select, textarea');
+    if (field) { field.focus(); return; }
+    const primary = modal.querySelector('.btn-primary');
+    if (primary) primary.focus();
+  }
+
   function openModal(id) {
     const modal = document.getElementById(id);
     const overlap = document.getElementById('modalOverlap');
     if (!modal || !overlap) return;
     overlap.classList.add('active');
     modal.classList.add('active');
+    focusFirstModalControl(modal);
   }
 
   function closeModal(id) {
@@ -430,6 +642,16 @@
     });
     const overlap = document.getElementById('modalOverlap');
     if (overlap) overlap.classList.remove('active');
+  }
+
+  // "No mostrar al iniciar" es una preferencia de la app (localStorage
+  // aparte), no de la campaña: todas las campañas la comparten en este
+  // navegador y nunca viaja en el JSON exportado. El checkbox siempre
+  // refleja el valor guardado, tanto al abrir automático como manual.
+  function openAboutModal() {
+    const checkbox = document.getElementById('aboutHideOnStartupInput');
+    if (checkbox) checkbox.checked = NS.storage.loadPreferences().hideAboutOnStartup === true;
+    openModal('aboutModal');
   }
 
   function openTablesModal() {
@@ -455,6 +677,52 @@
       '</div></div>';
 
     openModal('tablesModal');
+  }
+
+  // Calculadora de PX: herramienta neutral (no depende de rules.experience,
+  // que todavía no existe). El tesoro es siempre PX manual — no asumimos
+  // "1 po = 1 PX" ni ninguna conversión, así vale para cualquier ruleset.
+  // No persiste en la campaña ni modifica personajes: solo calcula.
+  function calculateXpSplit(monsterXp, treasureXp, otherXp, partySize) {
+    const total = Math.max(0, Math.floor(monsterXp) || 0) +
+      Math.max(0, Math.floor(treasureXp) || 0) +
+      Math.max(0, Math.floor(otherXp) || 0);
+    const safePartySize = Math.max(0, Math.floor(partySize) || 0);
+    if (safePartySize <= 0) {
+      return { total: total, partySize: 0, perCharacter: null, remainder: null };
+    }
+    return {
+      total: total,
+      partySize: safePartySize,
+      perCharacter: Math.floor(total / safePartySize),
+      remainder: total % safePartySize
+    };
+  }
+
+  function renderXpResult() {
+    const monsterXp = Number(document.getElementById('xpMonsterInput').value) || 0;
+    const treasureXp = Number(document.getElementById('xpTreasureInput').value) || 0;
+    const otherXp = Number(document.getElementById('xpOtherInput').value) || 0;
+    const partySize = Number(document.getElementById('xpPartySizeInput').value) || 0;
+
+    const result = calculateXpSplit(monsterXp, treasureXp, otherXp, partySize);
+    const box = document.getElementById('xpResultBox');
+    if (!box) return result;
+
+    let html = 'Total: ' + result.total + ' PX';
+    if (result.partySize <= 0) {
+      html += '<br>Selecciona al menos 1 personaje.';
+    } else {
+      html += '<br>PX por personaje: ' + result.perCharacter;
+      html += '<br>Resto: ' + result.remainder + ' PX';
+    }
+    box.innerHTML = html;
+    return result;
+  }
+
+  function openXpCalculatorModal() {
+    renderXpResult();
+    openModal('xpCalculatorModal');
   }
 
   function openEncounterDetailsModal() {
@@ -737,6 +1005,70 @@
     performRulesetChange(rulesetId, customConfig);
   }
 
+  // Reutilizado por "Nueva campaña..." y "Cargar demo...": ambos sustituyen
+  // por completo el estado activo, así que comparten el mismo aviso de
+  // confirmación (si hay algo que perder) en vez de duplicar el flujo.
+  let pendingCampaignReplace = null;
+
+  function requestCampaignReplace(message, action) {
+    if (campaignHasProgress()) {
+      pendingCampaignReplace = action;
+      const textEl = document.getElementById('replaceCampaignConfirmText');
+      if (textEl) textEl.textContent = message;
+      closeAllModals();
+      openModal('replaceCampaignConfirmModal');
+      return;
+    }
+    closeAllModals();
+    action();
+  }
+
+  function activateCampaignState(newState) {
+    state = newState;
+    currentMode = state.campaign.currentMode || 'dungeon';
+    lastNonCombatMode = currentMode === 'combat' ? 'dungeon' : currentMode;
+    setMode(currentMode);
+  }
+
+  function openNewCampaignModal() {
+    const nameInput = document.getElementById('newCampaignNameInput');
+    const rulesetSelect = document.getElementById('newCampaignRulesetSelect');
+    if (nameInput) nameInput.value = '';
+    if (rulesetSelect) {
+      rulesetSelect.innerHTML = '';
+      NS.rules.listProfiles().forEach(function (profile) {
+        const option = document.createElement('option');
+        option.value = profile.id;
+        option.textContent = profile.name;
+        rulesetSelect.appendChild(option);
+      });
+      rulesetSelect.value = 'generic';
+    }
+    openModal('newCampaignModal');
+  }
+
+  function createNewCampaignFromForm() {
+    const nameInput = document.getElementById('newCampaignNameInput');
+    const rulesetSelect = document.getElementById('newCampaignRulesetSelect');
+    const name = nameInput ? nameInput.value.trim() : '';
+    const rulesetId = rulesetSelect ? rulesetSelect.value : 'generic';
+
+    const fresh = NS.createEmptyCampaign();
+    fresh.campaign.name = name;
+    NS.rules.applyToState(fresh, rulesetId, null);
+    activateCampaignState(fresh);
+    NS.addLog(state, 'Campaña creada.');
+    NS.storage.save(state);
+    render();
+  }
+
+  function loadDemoCampaign() {
+    activateCampaignState(NS.createDemoCampaign());
+    NS.addLog(state, 'Campaña de demostración cargada.');
+    NS.storage.save(state);
+    render();
+  }
+
   function executeAction(action) {
     if (action === 'save') {
       NS.storage.save(state);
@@ -745,6 +1077,13 @@
     } else if (action === 'import') {
       const importInput = document.getElementById('importFileInput');
       if (importInput) importInput.click();
+    } else if (action === 'newCampaign') {
+      openNewCampaignModal();
+    } else if (action === 'loadDemo') {
+      requestCampaignReplace(
+        'Esto sustituirá la campaña activa por los datos de demostración.',
+        loadDemoCampaign
+      );
     } else if (action === 'editCampaign') {
       openModal('campaignModal');
     } else if (action === 'addCharacter') {
@@ -761,12 +1100,14 @@
       openTablesModal();
     } else if (action === 'rules') {
       openRulesModal();
+    } else if (action === 'xpCalculator') {
+      openXpCalculatorModal();
     } else if (action === 'help') {
       openModal('helpModal');
     } else if (action === 'shortcuts') {
       openModal('shortcutsModal');
     } else if (action === 'about') {
-      openModal('aboutModal');
+      openAboutModal();
     }
 
     render();
@@ -779,6 +1120,7 @@
   function render() {
     NS.recalculatePartySummary(state);
     renderCampaignInfo();
+    updateLastSavedIndicator();
     renderParty();
     renderTime();
     renderDungeonSummary();
@@ -868,7 +1210,7 @@
   }
 
   function normalizeCombatState() {
-    if (!state.combat) state.combat = NS.createInitialState().combat;
+    if (!state.combat) state.combat = NS.createEmptyCampaign().combat;
     if (state.combat.currentTurn === undefined) state.combat.currentTurn = 0;
     if (state.combat.previousMode === undefined) state.combat.previousMode = null;
     if (state.combat.selectedId === undefined) state.combat.selectedId = null;
@@ -905,7 +1247,7 @@
     if (dungeon.restWarned === undefined) dungeon.restWarned = false;
     if (!dungeon.rules.restDurationTurns) dungeon.rules.restDurationTurns = 1;
     if (!Array.isArray(dungeon.rules.explorationActions)) {
-      dungeon.rules.explorationActions = NS.createInitialState().dungeon.rules.explorationActions;
+      dungeon.rules.explorationActions = NS.createEmptyCampaign().dungeon.rules.explorationActions;
     }
     (dungeon.lightSources || []).forEach(function (source) {
       if (source.warnedLow === undefined) source.warnedLow = false;
@@ -915,7 +1257,7 @@
 
   function normalizeWildernessState() {
     const wilderness = state.wilderness;
-    const defaults = NS.createInitialState().wilderness;
+    const defaults = NS.createEmptyCampaign().wilderness;
     if (wilderness.movementRemaining === undefined) wilderness.movementRemaining = wilderness.rules.movementPerDay || 6;
     if (wilderness.foodWarned === undefined) wilderness.foodWarned = false;
     if (wilderness.foodEmptyWarned === undefined) wilderness.foodEmptyWarned = false;
@@ -943,6 +1285,14 @@
     }
     if (state.campaign.customRuleset === undefined) {
       state.campaign.customRuleset = null;
+    }
+    // Campañas guardadas/exportadas antes de esta actualización no tienen
+    // meta.lastSavedAt: el indicador debe mostrar "Sin guardar" hasta el
+    // siguiente guardado real, nunca fallar.
+    if (!state.meta) {
+      state.meta = { lastSavedAt: null };
+    } else if (state.meta.lastSavedAt === undefined) {
+      state.meta.lastSavedAt = null;
     }
   }
 
@@ -984,6 +1334,10 @@
       setMode(currentMode);
       render();
       NS.addLog(state, 'Campaña importada correctamente.');
+      // La importación debe quedar realmente persistida en este navegador
+      // (si no, se perdería al recargar); esto también estampa
+      // meta.lastSavedAt al momento en que la importación queda guardada.
+      NS.storage.save(state);
       render();
     });
     event.target.value = '';
@@ -1044,6 +1398,22 @@
     closeAllModals();
   });
 
+  bindClick('newCampaignConfirmCreateBtn', function () {
+    closeModal('newCampaignModal');
+    requestCampaignReplace(
+      'Crear una nueva campaña sustituirá la campaña activa en este navegador. Si quieres conservarla, expórtala antes.',
+      createNewCampaignFromForm
+    );
+  });
+
+  bindClick('replaceCampaignConfirmBtn', function () {
+    if (pendingCampaignReplace) {
+      pendingCampaignReplace();
+      pendingCampaignReplace = null;
+    }
+    closeAllModals();
+  });
+
   document.querySelectorAll('.dos-menu-trigger').forEach(function (trigger) {
     trigger.addEventListener('click', function () {
       const nextPanel = trigger.dataset.menu;
@@ -1093,6 +1463,125 @@
 
   bindClick('logExpandBtn', openLogModal);
 
+  ['xpMonsterInput', 'xpTreasureInput', 'xpOtherInput', 'xpPartySizeInput'].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', renderXpResult);
+  });
+
+  bindClick('xpUseCurrentPartyBtn', function () {
+    const input = document.getElementById('xpPartySizeInput');
+    if (input) input.value = String(state.party.length);
+    renderXpResult();
+  });
+
+  bindClick('xpCopyResultBtn', function () {
+    const result = renderXpResult();
+    const text = 'Total: ' + result.total + ' PX\n' +
+      result.partySize + ' personajes\n' +
+      (result.partySize > 0 ? result.perCharacter + ' PX/personaje\nResto: ' + result.remainder : 'Selecciona al menos 1 personaje.');
+    const btn = document.getElementById('xpCopyResultBtn');
+    if (!navigator.clipboard || !navigator.clipboard.writeText) return;
+    navigator.clipboard.writeText(text).then(function () {
+      if (!btn) return;
+      const original = btn.textContent;
+      btn.textContent = 'Copiado';
+      setTimeout(function () { btn.textContent = original; }, 1200);
+    }).catch(function () {
+      // Sin permisos de portapapeles (habitual en file://): no bloquear la calculadora por esto.
+    });
+  });
+
+  // Lanzador de Dados 2.0. El campo de expresión sigue siendo la fuente de
+  // verdad; botones/cantidad/modificadores son solo atajos para construirlo
+  // (nunca tiran automáticamente). El historial vive solo en memoria de
+  // sesión — no contamina la campaña ni localStorage.
+  let diceQuantity = 1;
+  const diceHistory = [];
+  const DICE_HISTORY_LIMIT = 20;
+
+  function updateDiceQtyDisplay() {
+    const el = document.getElementById('diceQtyValue');
+    if (el) el.textContent = String(diceQuantity);
+  }
+
+  // Construye la expresión a partir del campo actual: si está vacío la
+  // sustituye por "{cantidad}dN"; si ya tiene contenido, añade "+{cantidad}dN"
+  // como un término más (permite construir expresiones compuestas a golpe
+  // de botón, p.ej. 1d6+2d8).
+  function insertDiceFace(sides) {
+    const input = document.getElementById('diceExpressionInput');
+    if (!input) return;
+    const term = (diceQuantity > 1 ? diceQuantity : '') + 'd' + sides;
+    const current = input.value.trim();
+    input.value = current ? current + '+' + term : term;
+  }
+
+  // Modificador rápido: si la expresión ya termina en "+N"/"-N" literal,
+  // acumula sobre ese número; si no, simplemente añade "+1"/"-1" al final
+  // (fallback explícitamente aceptado por el pack si acumular se complica).
+  function applyDiceModifier(delta) {
+    const input = document.getElementById('diceExpressionInput');
+    if (!input) return;
+    const current = input.value || '';
+    const match = current.match(/^(.*?)([+-])(\d+)$/);
+    if (match) {
+      const prefix = match[1];
+      const existing = (match[2] === '+' ? 1 : -1) * Number(match[3]);
+      const updated = existing + delta;
+      input.value = updated === 0 ? prefix : prefix + (updated > 0 ? '+' : '-') + Math.abs(updated);
+    } else {
+      input.value = current + (delta > 0 ? '+' : '') + delta;
+    }
+  }
+
+  function renderDiceResult(result) {
+    const box = document.getElementById('diceResult');
+    if (!box) return;
+    const lines = ['<strong>' + escapeHtml(result.expression) + '</strong>'];
+    result.dice.forEach(function (d) {
+      const sep = d.kind === 'd66' ? '→' : '=';
+      lines.push(escapeHtml(d.notation) + ' → [' + d.rolls.join(', ') + '] ' + sep + ' ' + d.subtotal);
+    });
+    lines.push('Total: ' + result.total);
+    if (result.comparison) {
+      lines.push(result.comparison.operator + ' ' + result.comparison.target +
+        ' → <span class="dice-comparison-' + (result.comparison.success ? 'success' : 'fail') + '">' +
+        (result.comparison.success ? 'ÉXITO' : 'FALLO') + '</span>');
+    }
+    box.innerHTML = lines.join('<br>');
+  }
+
+  function renderDiceHistory() {
+    const list = document.getElementById('diceHistoryList');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!diceHistory.length) {
+      list.innerHTML = '<div class="empty-row">Sin tiradas todavía.</div>';
+      return;
+    }
+    diceHistory.forEach(function (entry) {
+      const item = document.createElement('div');
+      item.className = 'list-item dice-history-item';
+      item.dataset.diceHistoryExpression = entry.expression;
+      item.innerHTML =
+        '<span class="dice-history-time">' + entry.time + '</span>' +
+        '<span class="dice-history-expr">' + escapeHtml(entry.expression) + '</span>' +
+        '<span class="dice-history-total">' + entry.total + '</span>';
+      list.appendChild(item);
+    });
+  }
+
+  function pushDiceHistory(result) {
+    const now = new Date();
+    diceHistory.unshift({
+      time: String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0'),
+      expression: result.expression,
+      total: result.total
+    });
+    if (diceHistory.length > DICE_HISTORY_LIMIT) diceHistory.length = DICE_HISTORY_LIMIT;
+    renderDiceHistory();
+  }
+
   bindClick('diceRollBtn', function () {
     const input = document.getElementById('diceExpressionInput');
     const resultBox = document.getElementById('diceResult');
@@ -1101,12 +1590,67 @@
     try {
       const result = NS.roll(expression);
       NS.addLog(state, 'Tirada ' + result.expression + ': ' + result.total + ' (' + result.rolls.join(', ') + ')');
-      resultBox.innerHTML = '<strong>' + escapeHtml(result.expression) + '</strong>: ' + result.total + ' (' + result.rolls.join(', ') + ')';
+      renderDiceResult(result);
+      pushDiceHistory(result);
       render();
     } catch (error) {
       resultBox.textContent = error.message;
     }
   });
+
+  bindClick('diceQtyMinusBtn', function () {
+    diceQuantity = Math.max(1, diceQuantity - 1);
+    updateDiceQtyDisplay();
+  });
+
+  bindClick('diceQtyPlusBtn', function () {
+    diceQuantity = diceQuantity + 1;
+    updateDiceQtyDisplay();
+  });
+
+  document.querySelectorAll('[data-dice-face]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      insertDiceFace(Number(btn.dataset.diceFace));
+    });
+  });
+
+  document.querySelectorAll('[data-dice-modifier]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      applyDiceModifier(Number(btn.dataset.diceModifier));
+    });
+  });
+
+  bindClick('diceHistoryClearBtn', function () {
+    diceHistory.length = 0;
+    renderDiceHistory();
+  });
+
+  bindClick('diceExpressionClearBtn', function () {
+    const input = document.getElementById('diceExpressionInput');
+    if (!input) return;
+    input.value = '';
+    input.focus();
+  });
+
+  document.addEventListener('click', function (event) {
+    const item = event.target.closest('[data-dice-history-expression]');
+    if (!item) return;
+    const input = document.getElementById('diceExpressionInput');
+    if (input) input.value = item.dataset.diceHistoryExpression;
+  });
+
+  bindClick('diceHelpBtn', function () {
+    openModal('diceHelpModal');
+  });
+
+  const aboutHideOnStartupInput = document.getElementById('aboutHideOnStartupInput');
+  if (aboutHideOnStartupInput) {
+    aboutHideOnStartupInput.addEventListener('change', function () {
+      const preferences = NS.storage.loadPreferences();
+      preferences.hideAboutOnStartup = aboutHideOnStartupInput.checked;
+      NS.storage.savePreferences(preferences);
+    });
+  }
 
   bindClick('menuToggleBtn', function () {
     const dropdown = document.getElementById('menuDropdown');
@@ -1133,11 +1677,20 @@
     }
 
     if (event.key === 'Enter') {
-      const travelModal = document.getElementById('travelModal');
-      if (travelModal && travelModal.classList.contains('active')) {
-        const confirmBtn = document.getElementById('travelConfirmBtn');
-        if (confirmBtn && !confirmBtn.disabled) confirmBtn.click();
-        return;
+      const enterConfirmMap = {
+        travelModal: 'travelConfirmBtn',
+        newCampaignModal: 'newCampaignConfirmCreateBtn',
+        replaceCampaignConfirmModal: 'replaceCampaignConfirmBtn',
+        ruleChangeConfirmModal: 'ruleChangeConfirmBtn',
+        diceModal: 'diceRollBtn'
+      };
+      for (const modalId in enterConfirmMap) {
+        const modal = document.getElementById(modalId);
+        if (modal && modal.classList.contains('active')) {
+          const confirmBtn = document.getElementById(enterConfirmMap[modalId]);
+          if (confirmBtn && !confirmBtn.disabled) confirmBtn.click();
+          return;
+        }
       }
     }
 
@@ -1148,12 +1701,14 @@
         event.preventDefault();
         NS.combat.selectAdjacent(state, -1);
         render();
+        scrollSelectedRowIntoView('combatantsList');
         return;
       }
       if (event.key === 'ArrowDown') {
         event.preventDefault();
         NS.combat.selectAdjacent(state, 1);
         render();
+        scrollSelectedRowIntoView('combatantsList');
         return;
       }
       if (event.key === 'n' || event.key === 'N') {
@@ -1431,7 +1986,7 @@
         btn.className = 'tui-button white-255 black-255-text';
         btn.dataset.directionKey = key;
         btn.title = direction.label;
-        btn.textContent = key;
+        btn.textContent = direction.abbr;
         rowEl.appendChild(btn);
       });
       container.appendChild(rowEl);
@@ -1540,5 +2095,7 @@
   loadSavedState();
   setMode(currentMode);
   render();
-  openModal('aboutModal');
+  if (NS.storage.loadPreferences().hideAboutOnStartup !== true) {
+    openAboutModal();
+  }
 })();

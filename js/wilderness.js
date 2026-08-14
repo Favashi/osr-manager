@@ -8,12 +8,12 @@
   // Mismos offsets axiales que usaba randomDirection(); nombrados una vez aquí
   // para reutilizarlos en el popup de viaje y en previewTravel/travel.
   const HEX_DIRECTIONS = [
-    { key: 'E', label: 'Este', dx: 1, dy: 0 },
-    { key: 'W', label: 'Oeste', dx: -1, dy: 0 },
-    { key: 'SE', label: 'Sureste', dx: 0, dy: 1 },
-    { key: 'NW', label: 'Noroeste', dx: 0, dy: -1 },
-    { key: 'NE', label: 'Noreste', dx: 1, dy: -1 },
-    { key: 'SW', label: 'Suroeste', dx: -1, dy: 1 }
+    { key: 'E', label: 'Este', abbr: 'E', dx: 1, dy: 0 },
+    { key: 'W', label: 'Oeste', abbr: 'O', dx: -1, dy: 0 },
+    { key: 'SE', label: 'Sureste', abbr: 'SE', dx: 0, dy: 1 },
+    { key: 'NW', label: 'Noroeste', abbr: 'NO', dx: 0, dy: -1 },
+    { key: 'NE', label: 'Noreste', abbr: 'NE', dx: 1, dy: -1 },
+    { key: 'SW', label: 'Suroeste', abbr: 'SO', dx: -1, dy: 1 }
   ];
 
   const TERRAIN_LABELS = {
@@ -86,7 +86,8 @@
 
   function randomClimate(state) {
     const climates = (state.wilderness.rules && state.wilderness.rules.climates) || ['Claro'];
-    return climates[Math.floor(Math.random() * climates.length)];
+    const index = NS.roll('1d' + climates.length).total - 1;
+    return climates[index];
   }
 
   function reportResourceLevel(state, resourceName, value, warnFlagKey, emptyFlagKey) {
@@ -232,7 +233,7 @@
 
       const nextHex = NS.wilderness.moveToHex(state, preview.to.q, preview.to.r);
       if (isFirstVisit) {
-        nextHex.terrain = terrainByRoll(state, Math.floor(Math.random() * 6) + 1);
+        nextHex.terrain = terrainByRoll(state, NS.roll('1d6').total);
       }
       state.wilderness.terrain = nextHex.terrain;
 

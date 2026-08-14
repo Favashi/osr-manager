@@ -8,6 +8,9 @@ instalación, sin build. Funciona directamente abriendo `index.html`, y
 también puede publicarse como página estática mediante GitHub Pages — es la
 misma aplicación en ambos casos, no dos versiones distintas.
 
+**Versión actual:** 0.2.0 — ver [`CHANGELOG.md`](CHANGELOG.md) para el
+historial completo de cambios.
+
 ## Estado del proyecto
 
 Implementado:
@@ -193,6 +196,10 @@ ejemplo basado en Old-School Essentials), se documentará aquí y en
 asumirá que un dataset externo es MIT solo porque el código del proyecto lo
 sea.
 
+## Changelog
+
+Ver [`CHANGELOG.md`](CHANGELOG.md) para el historial de versiones.
+
 ## Licencia
 
 El código original de OSR Manager se distribuye bajo licencia **MIT** (ver
@@ -201,3 +208,11 @@ El código original de OSR Manager se distribuye bajo licencia **MIT** (ver
 El contenido y los componentes de terceros incluidos en el repositorio
 pueden estar sujetos a sus propias licencias. Consultar
 `THIRD_PARTY_NOTICES.md`.
+
+**Compatibilidad con la OGL:** el proyecto no incluye (todavía) contenido
+licenciado bajo la Open Game License. La licencia MIT cubre exclusivamente
+el código propio y no reclama derechos sobre ningún sistema OSR; los
+perfiles de `js/rules/` son parámetros de configuración originales, no
+texto de reglas copiado. Ver la sección "Compatibilidad con la OGL" en
+`THIRD_PARTY_NOTICES.md` para el criterio a seguir si en el futuro se
+integra contenido Open Game Content (p. ej. en el Codex).

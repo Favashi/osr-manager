@@ -1,13 +1,42 @@
 (function () {
   const NS = (window.OSRApp = window.OSRApp || {});
   const STORAGE_KEY = 'osr-manager-save';
+  const PREFERENCES_KEY = 'osr-manager-preferences';
 
   NS.storage = {
+    // Preferencias de la aplicación (locales al navegador/origen), separadas
+    // por completo del guardado de campaña: no viajan en el JSON exportado
+    // ni afectan a qué campaña está cargada. Todas las campañas comparten
+    // estas mismas preferencias en este navegador.
+    loadPreferences: function () {
+      try {
+        const raw = localStorage.getItem(PREFERENCES_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch (error) {
+        return {};
+      }
+    },
+
+    savePreferences: function (preferences) {
+      try {
+        localStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferences || {}));
+      } catch (error) {
+        // localStorage puede no estar disponible (privado/bloqueado): no
+        // debe romper la app por una preferencia no esencial.
+      }
+    },
+
+    // Única ruta central de guardado. F2, Archivo → Guardar, Nueva
+    // campaña, Cargar demo e Importar pasan todos por aquí, así que
+    // meta.lastSavedAt siempre refleja una escritura real en localStorage,
+    // nunca un simple cambio de estado en memoria.
     save: function (state) {
+      if (!state.meta) state.meta = {};
+      state.meta.lastSavedAt = new Date().toISOString();
       const payload = JSON.stringify(state, null, 2);
       localStorage.setItem(STORAGE_KEY, payload);
       NS.addLog(state, 'Partida guardada en el navegador.');
-      return true;
+      return state.meta.lastSavedAt;
     },
 
     load: function () {

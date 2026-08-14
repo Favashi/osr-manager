@@ -28,6 +28,36 @@ Los nombres de los sistemas de juego se usan únicamente para identificar
 compatibilidad de reglas; OSR Manager no reproduce ni distribuye contenido
 protegido de esos manuales.
 
+## Compatibilidad con la OGL
+
+OSR Manager no incluye (todavía) ningún contenido licenciado bajo la Open
+Game License (OGL 1.0a) ni ningún otro texto de reglas protegido. Esto es
+compatible por diseño:
+
+- El código original del proyecto se licencia como **MIT**, y la licencia
+  MIT no impone restricciones sobre software que simplemente lea o
+  represente parámetros de sistemas de juego — no reclama derechos sobre
+  ningún sistema OSR ni sobre contenido de terceros.
+- Los perfiles de `js/rules/` (ver sección anterior) contienen únicamente
+  identificadores y parámetros de configuración propios (duración de
+  turno, dado de iniciativa, modo de CA, etc.), **no** texto de reglas
+  copiado de ningún manual. Los nombres de los sistemas se usan solo para
+  indicar compatibilidad, no como contenido con licencia propia.
+- Si en el futuro se integra contenido derivado de un sistema publicado
+  bajo OGL (por ejemplo un compendio basado en Old-School Essentials para
+  el Codex), ese contenido:
+  - se documentará en su propia fila de este fichero con origen y
+    licencia exactos;
+  - **no** se cubrirá por la licencia MIT del proyecto (que sigue
+    aplicando solo al código propio);
+  - incluirá el aviso de copyright de la Sección 15 de la OGL 1.0a
+    correspondiente a esa fuente, añadido íntegro (sin modificar) junto al
+    contenido o en este mismo fichero.
+
+No se declara aquí ninguna licencia OGL global para el proyecto porque
+todavía no hay contenido Open Game Content distribuido: esta sección fija
+el criterio a seguir cuando lo haya.
+
 ## Notas generales
 
 - Un repositorio de GitHub privado **no** protege los archivos publicados

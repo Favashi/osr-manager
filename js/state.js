@@ -1,12 +1,17 @@
 (function () {
   const NS = (window.OSRApp = window.OSRApp || {});
 
-  NS.createInitialState = function () {
+  // Esqueleto compartido por createEmptyCampaign() y createDemoCampaign():
+  // toda la forma de datos que el resto de la app necesita (motores de
+  // Mazmorra/Exterior/Combate, Ruleset Core), sin ningún personaje/luz/
+  // efecto/hex de ejemplo. Esos datos de demostración viven únicamente en
+  // createDemoCampaign(), nunca en el estado inicial real de la app.
+  function buildBaseState() {
     const state = {
       schemaVersion: 1,
       campaign: {
-        name: 'Campaña sin nombre',
-        adventure: 'Aventura sin nombre',
+        name: '',
+        adventure: '',
         currentMode: 'dungeon',
         rulesetId: 'generic',
         customRuleset: null
@@ -16,25 +21,11 @@
         hour: 8,
         minute: 0
       },
-      party: [
-        {
-          id: 'pc-1',
-          name: 'Borin',
-          player: 'DJ',
-          class: 'Guerrero',
-          level: 1,
-          hpCurrent: 12,
-          hpMax: 12,
-          armorClass: 14,
-          movement: 120,
-          status: 'Listo',
-          notes: ''
-        }
-      ],
+      party: [],
       playerSummary: {
-        totalCharacters: 1,
-        totalHp: 12,
-        maxHp: 12
+        totalCharacters: 0,
+        totalHp: 0,
+        maxHp: 0
       },
       dungeon: {
         turn: 0,
@@ -54,29 +45,8 @@
             { id: 'force-door', label: 'Forzar puerta', consumesTurn: true, logText: 'El grupo fuerza una puerta.' }
           ]
         },
-        lightSources: [
-          {
-            id: 'light-1',
-            name: 'Antorcha',
-            carrier: 'Borin',
-            durationInitial: 20,
-            durationRemaining: 20,
-            lit: true,
-            warnedLow: false,
-            exhausted: false
-          }
-        ],
-        effects: [
-          {
-            id: 'effect-1',
-            name: 'Bendición',
-            character: 'Borin',
-            duration: 2,
-            initialDuration: 2,
-            unit: 'turnos',
-            active: true
-          }
-        ],
+        lightSources: [],
+        effects: [],
         encounterTable: {
           name: 'Encuentros nivel 1',
           dice: '1d6',
@@ -143,10 +113,10 @@
             terrain: 'forest',
             discovered: true,
             visited: true,
-            name: 'Bosque de la Marca',
-            locations: ['Sendero antiguo'],
-            notes: 'Pistas de paso humanoide.',
-            gmNotes: 'Hay una cabaña vacía a dos hexes.',
+            name: '',
+            locations: [],
+            notes: '',
+            gmNotes: '',
             encounters: []
           }
         ]
@@ -214,6 +184,9 @@
       ],
       ui: {
         lastMessage: 'Campaña lista.'
+      },
+      meta: {
+        lastSavedAt: null
       }
     };
 
@@ -223,6 +196,70 @@
     // Core). Ver js/rules/generic.js y js/rules/resolver.js#applyToState.
     NS.rules.applyToState(state, 'generic');
 
+    return state;
+  }
+
+  // Estado con el que arranca la app cuando no hay ninguna campaña
+  // guardada: válido para todos los motores, sin ningún dato de ejemplo.
+  NS.createEmptyCampaign = function () {
+    const state = buildBaseState();
+    NS.recalculatePartySummary(state);
+    return state;
+  };
+
+  // Plantilla explícita de campaña de demostración (Archivo → Cargar
+  // demo...). Cada llamada construye un estado nuevo e independiente: no
+  // comparte arrays/objetos entre invocaciones, así que jugar/modificar la
+  // demo cargada nunca altera la plantilla.
+  NS.createDemoCampaign = function () {
+    const state = buildBaseState();
+
+    state.campaign.name = 'Campaña de demostración';
+    state.campaign.adventure = 'La Marca del Este';
+    state.campaign.createdFrom = 'demo';
+
+    state.party.push({
+      id: 'pc-1',
+      name: 'Borin',
+      player: 'DJ',
+      class: 'Guerrero',
+      level: 1,
+      hpCurrent: 12,
+      hpMax: 12,
+      armorClass: 14,
+      movement: 120,
+      status: 'Listo',
+      notes: ''
+    });
+
+    state.dungeon.lightSources.push({
+      id: 'light-1',
+      name: 'Antorcha',
+      carrier: 'Borin',
+      durationInitial: 20,
+      durationRemaining: 20,
+      lit: true,
+      warnedLow: false,
+      exhausted: false
+    });
+
+    state.dungeon.effects.push({
+      id: 'effect-1',
+      name: 'Bendición',
+      character: 'Borin',
+      duration: 2,
+      initialDuration: 2,
+      unit: 'turnos',
+      active: true
+    });
+
+    const startHex = state.wilderness.hexes[0];
+    startHex.name = 'Bosque de la Marca';
+    startHex.locations = ['Sendero antiguo'];
+    startHex.notes = 'Pistas de paso humanoide.';
+    startHex.gmNotes = 'Hay una cabaña vacía a dos hexes.';
+
+    NS.recalculatePartySummary(state);
     return state;
   };
 
