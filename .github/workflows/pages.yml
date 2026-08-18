@@ -11,13 +11,9 @@ on:
   workflow_dispatch:
     inputs:
       publish_release:
-        description: 'Publicar release (crea tag + GitHub Release + osr-manager.zip)'
+        description: 'Publicar release (crea tag + GitHub Release + osr-manager.zip, usando la versión del fichero VERSION)'
         type: boolean
         default: false
-      version:
-        description: 'Versión (obligatoria si Publicar release=true; debe coincidir con el fichero VERSION)'
-        type: string
-        default: ''
       release_notes:
         description: 'Notas de versión (opcional; si se deja vacío se usa un texto mínimo)'
         type: string
@@ -89,17 +85,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO_VERSION: ${{ steps.version.outputs.value }}
-          INPUT_VERSION: ${{ inputs.version }}
         run: |
           set -e
-          if [ -z "$INPUT_VERSION" ]; then
-            echo "::error::Publicar release=true requiere indicar 'Versión'."
-            exit 1
-          fi
-          if [ "$INPUT_VERSION" != "$REPO_VERSION" ]; then
-            echo "::error::La versión indicada ($INPUT_VERSION) no coincide con el fichero VERSION ($REPO_VERSION). Actualiza VERSION antes de publicar."
-            exit 1
-          fi
           if ! grep -qF "Versión: $REPO_VERSION" index.html; then
             echo "::error::index.html (ventana Acerca de) no muestra 'Versión: $REPO_VERSION'. Actualízalo antes de publicar — misma fuente, sin versiones contradictorias."
             exit 1

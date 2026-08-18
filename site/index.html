@@ -44,7 +44,7 @@
 
     img { max-width: 100%; height: auto; display: block; }
 
-    .footer-row a, .hero-secondary a { text-decoration: underline; }
+    .footer-row a, .hero-secondary a, .portable-steps a { text-decoration: underline; }
     a:hover, a:focus-visible { color: var(--focus); }
 
     /* --- La hoja: un único objeto que estructura toda la página, con el
@@ -84,8 +84,14 @@
     .cta-row {
       display: flex;
       flex-wrap: wrap;
-      gap: 14px;
-      margin: 20px 0 14px;
+      justify-content: center;
+      gap: 40px;
+      margin: 30px 0 20px;
+    }
+
+    .hero .cta-row .tui-button {
+      padding: 19px 36px;
+      font-size: 1.3em;
     }
 
     /* Oculto por defecto en el fuente: el workflow de Pages quita el
@@ -243,39 +249,60 @@
     .philosophy-row p { margin: 0 0 4px; opacity: 0.8; }
     .philosophy-row p:last-child { margin-bottom: 0; }
 
-    /* --- Herramientas + Portable: unificadas en una sola fila, 2 col --- */
-    .split-row { padding: 0; }
-
-    .split-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-    }
-
-    .split-col { padding: 26px 34px; }
-
-    .split-col + .split-col { border-left: 2px solid var(--border); }
-
-    .split-col .section-title { margin: -26px -34px 16px; padding: 10px 34px; }
-
+    /* --- Herramientas y Portable: filas independientes, cada una a su
+       propia altura (evita el desequilibrio de forzarlas a 2 columnas
+       de igual alto con contenido de longitud distinta). --- */
     ul.tool-list {
       list-style: none;
       margin: 0;
       padding: 0;
-      opacity: 0.8;
       columns: 2;
-      column-gap: 24px;
+      column-gap: 40px;
     }
 
-    ul.tool-list li { margin-bottom: 4px; }
+    ul.tool-list li {
+      margin-bottom: 8px;
+      opacity: 0.8;
+      break-inside: avoid;
+    }
 
-    ul.portable-list {
-      list-style: none;
-      margin: 0 0 4px;
-      padding: 0;
+    ul.tool-list li:last-child { margin-bottom: 0; }
+
+    ul.tool-list strong { opacity: 1; }
+
+    .portable-badges {
+      margin: 0 0 16px;
+      opacity: 0.8;
+      text-align: center;
+    }
+
+    .portable-steps-label {
+      margin: 0 0 6px;
+      font-weight: bold;
+    }
+
+    ol.portable-steps {
+      margin: 0;
+      padding-left: 1.3em;
       opacity: 0.8;
     }
 
-    ul.portable-list li { margin-bottom: 3px; }
+    ol.portable-steps li { margin-bottom: 4px; }
+    ol.portable-steps li:last-child { margin-bottom: 0; }
+
+    ol.portable-steps code {
+      font-family: inherit;
+      font-weight: bold;
+      opacity: 1;
+    }
+
+    .portable-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+    }
+
+    .portable-grid .lede { opacity: 0.8; }
 
     /* --- Apoya el proyecto --- */
     .support-row {
@@ -288,6 +315,14 @@
     }
     .support-text h2 { margin: 0 0 8px; }
 
+    .support-row .tui-button {
+      /* Encoge de forma fluida al estrechar el viewport, para quedarse
+         en la misma línea que el texto el mayor tiempo posible — solo
+         cae a su propia línea centrada en el apilado móvil (≤640px). */
+      padding: clamp(9px, 1.8vw, 14px) clamp(16px, 3vw, 28px);
+      font-size: clamp(0.85em, 1.6vw + 0.5em, 1.1em);
+    }
+
     /* --- Footer --- */
     .footer-row { padding: 16px 44px; font-size: 0.85em; text-align: center; }
     .footer-row p { margin: 0 0 4px; opacity: 0.8; }
@@ -297,37 +332,33 @@
       main { max-width: 100%; }
       .row { padding: 24px 28px; }
       .section-title { margin: -24px -28px 20px; padding: 10px 28px; }
-      .split-col { padding: 22px 28px; }
-      .split-col .section-title { margin: -22px -28px 16px; padding: 10px 28px; }
       .hero { padding-top: 50px; }
       h1 { font-size: 2.1em; }
       .ribbon { right: -54px; width: 210px; }
     }
 
     @media (max-width: 760px) {
-      .split-grid { grid-template-columns: 1fr; }
-      .split-col + .split-col { border-left: none; border-top: 2px solid var(--border); }
       ul.tool-list { columns: 1; }
+      .portable-grid { grid-template-columns: 1fr; gap: 20px; }
     }
 
     @media (max-width: 640px) {
       .mode-grid { grid-template-columns: 1fr; }
       .mode-col { border-left: none; border-top: 2px solid var(--border); }
       .mode-col:first-child { border-top: none; }
-      .support-row { flex-direction: column; align-items: flex-start; text-align: left; }
+      .support-row { flex-direction: column; align-items: center; text-align: center; }
     }
 
     @media (max-width: 520px) {
       .row { padding: 20px 18px; }
       .section-title { margin: -20px -18px 16px; padding: 8px 18px; }
-      .split-col { padding: 18px 18px; }
-      .split-col .section-title { margin: -18px -18px 14px; padding: 8px 18px; }
       .hero { padding-top: 46px; }
       h1 { font-size: 1.7em; }
       .module-code { left: 18px; font-size: 0.68em; }
       .ribbon { top: 18px; right: -60px; width: 190px; font-size: 0.68em; }
       .cta-row { flex-direction: column; align-items: stretch; }
       .cta-row .tui-button { text-align: center; }
+      .hero .cta-row .tui-button { padding: 16px 20px; font-size: 1.1em; }
       .theme-toggle { justify-content: center; }
     }
   </style>
@@ -416,29 +447,34 @@
         <p class="highlight">Menos gestión. Más partida.</p>
       </div>
 
-      <div class="row split-row">
-        <div class="split-grid">
-          <div class="split-col">
-            <h2 class="tui-panel-header section-title">Herramientas</h2>
-            <ul class="tool-list">
-              <li>Dados</li>
-              <li>PX</li>
-              <li>Statblocks</li>
-              <li>Codex</li>
-              <li>Encuentros</li>
-            </ul>
+      <div class="row">
+        <h2 class="tui-panel-header section-title">Herramientas</h2>
+        <ul class="tool-list">
+          <li><strong>Dados</strong> — expresiones tipo 2d6+1d4+3, comparaciones, d%, d66.</li>
+          <li><strong>PX</strong> — calculadora rápida de experiencia.</li>
+          <li><strong>Statblocks</strong> — importa monstruos y PNJ desde texto (OSE, La Marca del Este), revisión manual antes de guardar.</li>
+          <li><strong>Codex</strong> — biblioteca de Monstruos, PNJ y Encuentros: Biblioteca global del navegador + contenido de la campaña actual, sin duplicar.</li>
+          <li><strong>Reglas</strong> — perfiles de sistema (Marca del Este, OSE, B/X, BECMI, LotFP, OD&amp;D, AD&amp;D 1e) que ajustan turno, iniciativa y CA.</li>
+          <li><strong>Exportar / Importar</strong> — guarda la campaña como JSON, muévela entre ordenadores o entre la versión online y la portable.</li>
+          <li><strong>Temas</strong> — 6 paletas de color para la interfaz (EGA Azul, DOS Ámbar, Terminal Verde, Monocromo, CGA Retro, Fósforo Verde).</li>
+        </ul>
+      </div>
+
+      <div class="row">
+        <h2 class="tui-panel-header section-title">Portable</h2>
+        <p class="portable-badges">Sin cuenta · Sin instalación · Funciona offline</p>
+        <div class="portable-grid">
+          <div>
+            <p class="portable-steps-label">Para ejecutarlo en tu ordenador:</p>
+            <ol class="portable-steps">
+              <li>Descarga <a href="https://github.com/Favashi/osr-manager/releases">osr-manager.zip</a> (última versión)</li>
+              <li>Descomprime el archivo</li>
+              <li>Abre <code>index.html</code> (doble clic)</li>
+            </ol>
           </div>
-          <div class="split-col">
-            <h2 class="tui-panel-header section-title">Portable</h2>
-            <ul class="portable-list">
-              <li>Sin cuenta</li>
-              <li>Sin instalación</li>
-              <li>Funciona offline</li>
-            </ul>
-            <div class="cta-row">
-              <a class="tui-button white-255 black-255-text btn-primary" href="./app/">Abrir online · v<span>__OSR_VERSION__</span> →</a>
-              <a class="tui-button white-255 black-255-text release-only" href="https://github.com/Favashi/osr-manager/releases/latest/download/osr-manager.zip">Descargar ZIP · v<span>__OSR_VERSION__</span> ↓</a>
-            </div>
+          <div>
+            <p class="portable-steps-label">Guardado:</p>
+            <p class="lede">Local en el navegador. La versión portable y la online son orígenes distintos y no comparten campañas — usa Exportar/Importar (menú Archivo) para mover una entre ellas.</p>
           </div>
         </div>
       </div>

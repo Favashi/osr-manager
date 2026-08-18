@@ -208,8 +208,8 @@ GitHub
 **Solo Pages** (`Publicar release` = false): actualiza la landing y la
 app publicadas. No crea tag ni Release.
 
-**Pages + Release** (`Publicar release` = true, indicando `Versión`):
-valida que la versión coincide con `VERSION`, construye `osr-manager.zip`,
+**Pages + Release** (`Publicar release` = true): usa la versión del
+fichero `VERSION` (no se pide a mano), construye `osr-manager.zip`,
 despliega Pages, crea el tag `vX.Y.Z`, publica la GitHub Release y adjunta
 el ZIP. Si el tag ya existe, falla sin sobrescribir nada.
 
