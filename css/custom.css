@@ -5,13 +5,236 @@
  * requerimiento funcional explícito.
  */
 
+/*
+ * Sistema de temas: SOLO color (ver #data-theme abajo). Ningún tema puede
+ * tocar layout, dimensiones, fuente, padding, altura de filas, bordes
+ * estructurales, posición de paneles ni Normal/Maximizado — eso sigue
+ * viviendo, sin variables, en el resto de este fichero.
+ *
+ * :root (sin atributo data-theme) = EGA Azul, con los MISMOS valores que
+ * la app ya usaba antes de este sistema: una instalación existente sin
+ * preferencia de tema guardada no cambia de aspecto. js/app.js aplica el
+ * tema guardado escribiendo data-theme en <html> (y un script inline en
+ * <head> lo hace antes del primer pintado, para evitar flash).
+ */
 :root {
+  --desktop-bg: #05060c;
+  --desktop-tint: rgba(70, 90, 140, 0.05);
+
+  --app-bg: rgb(0, 0, 168);
+  --panel-bg: rgb(168, 168, 168);
+  --panel-bg-text: rgb(0, 0, 0);
+  --button-bg: rgb(255, 255, 255);
+
+  --text: #fff;
+  --border: #fff;
+
+  --focus: rgb(255, 255, 0);
+  --focus-text: rgb(0, 0, 0);
+
+  --disabled: rgb(168, 168, 168);
+  --disabled-text: rgb(90, 90, 90);
+
   --mode-dungeon: rgb(255, 176, 0);
   --mode-dungeon-text: #000;
   --mode-wilderness: rgb(0, 168, 168);
   --mode-wilderness-text: #000;
   --mode-combat: rgb(168, 0, 0);
   --mode-combat-text: #fff;
+
+  --warning: rgb(255, 176, 0);
+  --critical: rgb(255, 0, 0);
+
+  --progress-empty: rgba(0, 0, 0, 0.4);
+  --progress-normal: rgb(0, 255, 255);
+  --progress-warning: rgb(255, 176, 0);
+  --progress-critical: rgb(255, 0, 0);
+  --progress-dimmed: rgba(255, 255, 255, 0.45);
+}
+
+/* DOS Ámbar: monitor monocromo ámbar, fondo muy oscuro. */
+:root[data-theme="amber"] {
+  --desktop-bg: #0a0700;
+  --desktop-tint: rgba(140, 90, 20, 0.05);
+
+  --app-bg: rgb(40, 24, 4);
+  --panel-bg: rgb(200, 140, 40);
+  --panel-bg-text: rgb(0, 0, 0);
+  --button-bg: rgb(255, 196, 92);
+
+  --text: rgb(255, 191, 64);
+  --border: rgb(255, 191, 64);
+
+  --focus: rgb(255, 255, 255);
+  --focus-text: rgb(0, 0, 0);
+
+  --disabled: rgb(120, 90, 40);
+  --disabled-text: rgb(200, 170, 120);
+
+  --mode-dungeon: rgb(255, 191, 0);
+  --mode-dungeon-text: #000;
+  --mode-wilderness: rgb(190, 150, 60);
+  --mode-wilderness-text: #000;
+  --mode-combat: rgb(255, 90, 40);
+  --mode-combat-text: #000;
+
+  --warning: rgb(255, 191, 0);
+  --critical: rgb(255, 70, 40);
+
+  --progress-empty: rgba(0, 0, 0, 0.4);
+  --progress-normal: rgb(255, 180, 60);
+  --progress-warning: rgb(255, 140, 0);
+  --progress-critical: rgb(255, 70, 40);
+  --progress-dimmed: rgba(255, 220, 180, 0.4);
+}
+
+/* Terminal Verde: CRT verde clásico, sin glow/scanlines/blur — solo paleta. */
+:root[data-theme="green"] {
+  --desktop-bg: #020804;
+  --desktop-tint: rgba(40, 120, 60, 0.05);
+
+  --app-bg: rgb(0, 40, 10);
+  --panel-bg: rgb(100, 200, 110);
+  --panel-bg-text: rgb(0, 0, 0);
+  --button-bg: rgb(170, 255, 180);
+
+  --text: rgb(120, 255, 140);
+  --border: rgb(120, 255, 140);
+
+  --focus: rgb(255, 255, 255);
+  --focus-text: rgb(0, 0, 0);
+
+  --disabled: rgb(50, 100, 55);
+  --disabled-text: rgb(170, 210, 175);
+
+  --mode-dungeon: rgb(200, 255, 80);
+  --mode-dungeon-text: #000;
+  --mode-wilderness: rgb(80, 255, 200);
+  --mode-wilderness-text: #000;
+  --mode-combat: rgb(255, 90, 90);
+  --mode-combat-text: #000;
+
+  --warning: rgb(200, 255, 80);
+  --critical: rgb(255, 70, 70);
+
+  --progress-empty: rgba(0, 0, 0, 0.4);
+  --progress-normal: rgb(120, 255, 140);
+  --progress-warning: rgb(200, 255, 80);
+  --progress-critical: rgb(255, 70, 70);
+  --progress-dimmed: rgba(180, 230, 190, 0.4);
+}
+
+/* Monocromo: negro/grises/blanco. Los modos se distinguen por contraste
+   (peso del gris), no por matiz. */
+:root[data-theme="mono"] {
+  --desktop-bg: #040404;
+  --desktop-tint: rgba(60, 60, 60, 0.05);
+
+  --app-bg: rgb(30, 30, 30);
+  --panel-bg: rgb(190, 190, 190);
+  --panel-bg-text: rgb(0, 0, 0);
+  --button-bg: rgb(235, 235, 235);
+
+  --text: rgb(235, 235, 235);
+  --border: rgb(210, 210, 210);
+
+  --focus: rgb(255, 255, 255);
+  --focus-text: rgb(0, 0, 0);
+
+  --disabled: rgb(90, 90, 90);
+  --disabled-text: rgb(180, 180, 180);
+
+  --mode-dungeon: rgb(220, 220, 220);
+  --mode-dungeon-text: #000;
+  --mode-wilderness: rgb(140, 140, 140);
+  --mode-wilderness-text: #000;
+  --mode-combat: rgb(60, 60, 60);
+  --mode-combat-text: #fff;
+
+  --warning: rgb(220, 220, 220);
+  --critical: rgb(255, 255, 255);
+
+  --progress-empty: rgba(0, 0, 0, 0.4);
+  --progress-normal: rgb(140, 140, 140);
+  --progress-warning: rgb(200, 200, 200);
+  --progress-critical: rgb(255, 255, 255);
+  --progress-dimmed: rgba(150, 150, 150, 0.4);
+}
+
+/* CGA Retro: cyan/magenta/blanco/negro, inspirado en CGA (no reproduce
+   limitaciones de hardware al pie de la letra). */
+:root[data-theme="cga"] {
+  --desktop-bg: #040206;
+  --desktop-tint: rgba(90, 40, 90, 0.05);
+
+  --app-bg: rgb(8, 8, 10);
+  --panel-bg: rgb(0, 255, 255);
+  --panel-bg-text: rgb(0, 0, 0);
+  --button-bg: rgb(255, 255, 255);
+
+  --text: rgb(255, 255, 255);
+  --border: rgb(0, 255, 255);
+
+  --focus: rgb(255, 0, 255);
+  --focus-text: rgb(255, 255, 255);
+
+  --disabled: rgb(90, 90, 90);
+  --disabled-text: rgb(180, 180, 180);
+
+  --mode-dungeon: rgb(255, 255, 255);
+  --mode-dungeon-text: #000;
+  --mode-wilderness: rgb(0, 255, 255);
+  --mode-wilderness-text: #000;
+  --mode-combat: rgb(255, 0, 80);
+  --mode-combat-text: #fff;
+
+  --warning: rgb(0, 255, 255);
+  --critical: rgb(255, 0, 0);
+
+  --progress-empty: rgba(0, 0, 0, 0.4);
+  --progress-normal: rgb(0, 255, 255);
+  --progress-warning: rgb(255, 255, 255);
+  --progress-critical: rgb(255, 0, 0);
+  --progress-dimmed: rgba(180, 180, 180, 0.4);
+}
+
+/* Fósforo Verde: monitor monocromo de fósforo verde. Únicamente
+   tonalidades de verde (con negro para fondo/contraste) — sin azul, cyan,
+   rojo, amarillo, magenta ni blanco puro. Misma geometría y componentes
+   que el resto de temas, solo cambia la paleta. */
+:root[data-theme="phosphor"] {
+  --desktop-bg: #000c00;
+  --desktop-tint: rgba(0, 150, 0, 0.05);
+
+  --app-bg: rgb(0, 30, 0);
+  --panel-bg: rgb(40, 110, 40);
+  --panel-bg-text: rgb(0, 0, 0);
+  --button-bg: rgb(60, 255, 60);
+
+  --text: rgb(60, 255, 60);
+  --border: rgb(40, 200, 40);
+
+  --focus: rgb(190, 255, 190);
+  --focus-text: rgb(0, 0, 0);
+
+  --disabled: rgb(30, 80, 30);
+  --disabled-text: rgb(120, 180, 120);
+
+  --mode-dungeon: rgb(150, 255, 150);
+  --mode-dungeon-text: #000;
+  --mode-wilderness: rgb(90, 210, 90);
+  --mode-wilderness-text: #000;
+  --mode-combat: rgb(15, 110, 15);
+  --mode-combat-text: rgb(190, 255, 190);
+
+  --warning: rgb(150, 255, 150);
+  --critical: rgb(0, 255, 0);
+
+  --progress-empty: rgba(0, 0, 0, 0.4);
+  --progress-normal: rgb(60, 255, 60);
+  --progress-warning: rgb(150, 255, 150);
+  --progress-critical: rgb(0, 255, 0);
+  --progress-dimmed: rgba(120, 180, 120, 0.4);
 }
 
 .app-window.mode-dungeon {
@@ -32,8 +255,8 @@
 html, body {
   margin: 0;
   min-height: 100%;
-  background: #000;
-  color: #fff;
+  background: var(--desktop-bg);
+  color: var(--text);
   font-family: "Lucida Console", "Courier New", monospace;
 }
 
@@ -62,10 +285,10 @@ select {
   /* Textura de "escritorio" retro DOS/EGA: micro-dither muy sutil sobre
      negro azulado. background-color de respaldo por si el gradient no
      renderiza; el tile de 4px no cambia con la resolución/DPI. */
-  background-color: #05060c;
+  background-color: var(--desktop-bg);
   background-image:
-    repeating-linear-gradient(45deg, rgba(70, 90, 140, 0.05) 0px, rgba(70, 90, 140, 0.05) 1px, transparent 1px, transparent 4px),
-    repeating-linear-gradient(-45deg, rgba(70, 90, 140, 0.05) 0px, rgba(70, 90, 140, 0.05) 1px, transparent 1px, transparent 4px);
+    repeating-linear-gradient(45deg, var(--desktop-tint) 0px, var(--desktop-tint) 1px, transparent 1px, transparent 4px),
+    repeating-linear-gradient(-45deg, var(--desktop-tint) 0px, var(--desktop-tint) 1px, transparent 1px, transparent 4px);
   background-size: 4px 4px;
   overflow: auto;
 }
@@ -81,9 +304,10 @@ select {
   padding: 0;
   display: flex;
   flex-direction: column;
-  background: rgb(0, 0, 168);
+  background: var(--app-bg);
+  color: var(--text);
   box-shadow: 10px 10px black;
-  border: 2px solid #fff;
+  border: 2px solid var(--border);
   transition: all 0.15s ease;
   overflow: hidden;
 }
@@ -137,8 +361,8 @@ select {
   gap: 2px;
   min-height: 24px;
   width: 100%;
-  background: #c0c0c0;
-  color: #000;
+  background: var(--panel-bg);
+  color: var(--panel-bg-text);
   border-bottom: 2px solid #000;
   padding: 0;
 }
@@ -147,7 +371,7 @@ select {
   appearance: none;
   border: none;
   background: transparent;
-  color: #000;
+  color: var(--panel-bg-text);
   line-height: 1;
   padding: 4px 8px;
   cursor: pointer;
@@ -162,8 +386,8 @@ select {
 }
 
 .dos-menu-icon:hover {
-  background: rgb(0, 0, 168);
-  color: #fff;
+  background: var(--app-bg);
+  color: var(--text);
 }
 
 .dos-app-name {
@@ -183,7 +407,7 @@ select {
   appearance: none;
   border: none;
   background: transparent;
-  color: #000;
+  color: var(--panel-bg-text);
   line-height: 1;
   cursor: pointer;
   text-transform: none;
@@ -202,13 +426,13 @@ select {
 
 .dos-menu-trigger:hover,
 .dos-menu-trigger.is-active {
-  background: rgb(0, 0, 168);
-  color: #fff;
+  background: var(--app-bg);
+  color: var(--text);
 }
 
 .dos-menu-panel button:hover {
-  background: rgb(0, 0, 168);
-  color: #fff;
+  background: var(--app-bg);
+  color: var(--text);
 }
 
 .dos-menu-bar-right {
@@ -228,7 +452,7 @@ select {
   appearance: none;
   border: none;
   background: transparent;
-  color: #000;
+  color: var(--panel-bg-text);
   font-family: inherit;
   line-height: 1;
   padding: 4px 6px;
@@ -245,8 +469,8 @@ select {
 }
 
 .dos-window-button:hover {
-  background: rgb(0, 0, 168);
-  color: #fff;
+  background: var(--app-bg);
+  color: var(--text);
 }
 
 .dos-menu-dropdown {
@@ -265,7 +489,7 @@ select {
 
 .dos-menu-panel {
   display: none;
-  background: #c0c0c0;
+  background: var(--panel-bg);
   border: 2px solid #000;
   border-top: 1px solid #fff;
   border-left: 1px solid #fff;
@@ -286,14 +510,14 @@ select {
   border-bottom: 1px solid transparent;
   padding: 2px 24px 2px 12px;
   background: transparent;
-  color: #000;
+  color: var(--panel-bg-text);
   cursor: pointer;
   appearance: none;
 }
 
 .dos-menu-panel button:hover {
-  background: rgb(0, 0, 168);
-  color: #fff;
+  background: var(--app-bg);
+  color: var(--text);
 }
 
 .dos-menu-panel button:last-child {
@@ -316,15 +540,15 @@ select {
 }
 
 .btn-primary {
-  border: 2px solid rgb(255, 255, 0) !important;
+  border: 2px solid var(--focus) !important;
   font-weight: bold;
 }
 
 .tui-button.disabled,
 .tui-button:disabled {
   text-decoration: none !important;
-  background: rgb(168, 168, 168) !important;
-  color: rgba(0, 0, 0, 0.45) !important;
+  background: var(--disabled) !important;
+  color: var(--disabled-text) !important;
   box-shadow: none !important;
   cursor: default !important;
 }
@@ -336,7 +560,7 @@ select {
 .dos-window-button:focus-visible,
 .panel-add-btn:focus-visible,
 .tui-input:focus-visible {
-  outline: 2px solid rgb(255, 255, 0);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -351,7 +575,7 @@ select {
   padding: 5px 10px;
   background: rgba(0, 0, 0, 0.2);
   border: 2px solid rgba(255, 255, 255, 0.5);
-  color: #fff;
+  color: var(--text);
   text-align: left;
   cursor: pointer;
   appearance: none;
@@ -359,7 +583,7 @@ select {
 
 .app-campaign-bar:hover {
   background: rgba(255, 255, 255, 0.12);
-  border-color: #fff;
+  border-color: var(--border);
 }
 
 #campaignBarLabel {
@@ -469,8 +693,8 @@ select {
 
 .tui-panel-header {
   position: relative;
-  background: rgb(168, 168, 168) !important;
-  color: #000;
+  background: var(--panel-bg) !important;
+  color: var(--panel-bg-text);
 }
 
 /* Contador reutilizable de cabecera (Grupo [4], Efectos [2]...). Preparado
@@ -490,7 +714,7 @@ select {
   padding: 0 4px;
   border: none;
   background: transparent;
-  color: #000;
+  color: var(--panel-bg-text);
   cursor: pointer;
 }
 
@@ -503,8 +727,8 @@ select {
 }
 
 .panel-add-btn:hover {
-  background: rgb(0, 0, 168);
-  color: #fff;
+  background: var(--app-bg);
+  color: var(--text);
 }
 
 .compact-list,
@@ -523,7 +747,7 @@ select {
 .combatant-row {
   background: rgba(0, 0, 0, 0.18);
   border: 2px solid rgba(255, 255, 255, 0.45);
-  color: #fff;
+  color: var(--text);
   padding: 4px 8px;
 }
 
@@ -532,14 +756,14 @@ select {
    funcionando igual (alias) para no tocar el HTML/JS ya existente. */
 .empty-row,
 .tui-empty-state {
-  color: rgba(255, 255, 255, 0.6);
+  color: color-mix(in srgb, var(--text) 60%, transparent);
   padding: 2px 4px;
 }
 
 .list-item {
   background: transparent;
   border: none;
-  color: #fff;
+  color: var(--text);
   padding: 2px 2px;
 }
 
@@ -571,7 +795,7 @@ select {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: rgb(0, 0, 168);
+  background: var(--app-bg);
 }
 
 .combatant-row .col-ini,
@@ -589,9 +813,9 @@ select {
 }
 
 .combatant-row.selected {
-  background: rgb(255, 255, 0) !important;
-  color: #000 !important;
-  border-color: #000;
+  background: var(--focus) !important;
+  color: var(--focus-text) !important;
+  border-color: var(--focus-text);
 }
 
 /* Actor con el turno actual: indicador discreto (glifo), nunca el mismo
@@ -618,7 +842,7 @@ select {
   gap: 4px;
   background: rgba(0, 0, 0, 0.18);
   border: 2px solid rgba(255, 255, 255, 0.45);
-  color: #fff;
+  color: var(--text);
   padding: 2px 6px;
 }
 
@@ -633,7 +857,7 @@ select {
 }
 
 .status-chip button:hover {
-  color: rgb(255, 255, 0);
+  color: var(--focus);
 }
 
 .party-row {
@@ -642,7 +866,7 @@ select {
   align-items: baseline;
   gap: 6px;
   padding: 2px 2px;
-  color: #fff;
+  color: var(--text);
 }
 
 .party-row-header {
@@ -651,7 +875,7 @@ select {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: rgb(0, 0, 168);
+  background: var(--app-bg);
 }
 
 #partyList {
@@ -715,19 +939,19 @@ select {
 }
 
 .ascii-progress .tui-progress {
-  background-color: rgb(0, 255, 255);
+  background-color: var(--progress-normal);
 }
 
 .ascii-progress.warning .tui-progress {
-  background-color: rgb(255, 176, 0);
+  background-color: var(--progress-warning);
 }
 
 .ascii-progress.critical .tui-progress {
-  background-color: rgb(255, 0, 0);
+  background-color: var(--progress-critical);
 }
 
 .ascii-progress.dimmed .tui-progress {
-  background-color: rgba(255, 255, 255, 0.45);
+  background-color: var(--progress-dimmed);
 }
 
 .light-row {
@@ -736,6 +960,242 @@ select {
 
 .light-row:hover {
   background: rgba(255, 255, 255, 0.08);
+}
+
+.effect-row {
+  cursor: pointer;
+}
+
+.effect-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.effect-targets-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.effect-targets-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.effect-targets-list {
+  /* Override de "display: grid" heredado de .compact-list: en grid, cada
+     fila es un grid item con align-self "stretch" por defecto y se reparte
+     el alto sobrante en vez de quedarse en su contenido (mismo motivo que
+     .session-log más abajo) — con overflow-y:auto eso se veía como filas
+     recortadas/aplastadas en vez de una lista compacta con scroll. */
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 160px;
+  overflow-y: auto;
+  padding: 6px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+}
+
+.effect-target-checkbox {
+  flex: 0 0 auto;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+.effect-targets-error {
+  color: var(--critical);
+  font-size: 0.9em;
+}
+
+.effect-detail-name {
+  font-weight: bold;
+  font-size: 1.05em;
+}
+
+.effect-detail-section {
+  display: grid;
+  gap: 4px;
+}
+
+/* --- Statblock Importer ------------------------------------------------ */
+.statblock-textarea {
+  min-height: 180px;
+  resize: vertical;
+  font-family: inherit;
+  padding: 6px 8px;
+}
+
+.statblock-textarea-small {
+  min-height: 70px;
+  resize: vertical;
+  font-family: inherit;
+  padding: 6px 8px;
+}
+
+.statblock-warnings {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.statblock-warning-item {
+  color: var(--warning);
+  opacity: 0.9;
+  font-size: 0.9em;
+}
+
+.statblock-attacks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 6px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+}
+
+.statblock-attack-row {
+  display: grid;
+  grid-template-columns: 1.4fr 0.7fr 0.7fr 0.9fr auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.statblock-attack-row .sb-attack-remove {
+  padding: 2px 8px;
+}
+
+.statblock-ability-row {
+  display: grid;
+  grid-template-columns: 1fr 2fr auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.statblock-ability-row .sb-ability-remove {
+  padding: 2px 8px;
+}
+
+.statblock-scope-options {
+  display: flex;
+  gap: 20px;
+}
+
+/* --- Codex ------------------------------------------------------------ */
+.codex-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.codex-tab-btn.active {
+  background: var(--focus) !important;
+  color: var(--focus-text) !important;
+}
+
+.codex-toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.codex-search-field {
+  flex: 1;
+  min-width: 160px;
+}
+
+.codex-scope-field {
+  min-width: 140px;
+}
+
+.codex-result-count {
+  opacity: 0.75;
+  white-space: nowrap;
+  padding-bottom: 6px;
+}
+
+/* Flex-column deliberado (no .compact-list/grid): mismo motivo que
+   .session-log — cada fila debe medir solo su propio contenido, no
+   repartirse el alto sobrante del contenedor. */
+.codex-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 320px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+
+.codex-row {
+  display: grid;
+  grid-template-columns: 1fr 44px 44px 108px 84px;
+  gap: 10px;
+  align-items: center;
+  padding: 3px 6px;
+  cursor: pointer;
+}
+
+.codex-list--encounters .codex-row {
+  grid-template-columns: 1fr 2fr 84px;
+}
+
+/* Sin min-width:0 un grid item nunca encoge por debajo del ancho de su
+   contenido (mismo motivo que #campaignBarLabel más arriba): "Personalizado"
+   desbordaba su columna en vez de recortarse, invadiendo la de Ámbito. */
+.codex-row > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.codex-row-header {
+  font-weight: bold;
+  opacity: 0.75;
+  cursor: default;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--app-bg);
+}
+
+.codex-row:not(.codex-row-header):hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.codex-row.selected {
+  background: var(--focus) !important;
+  color: var(--focus-text) !important;
+}
+
+.codex-detail-body {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.codex-creature-results {
+  max-height: 200px;
+}
+
+.codex-creature-pick-row {
+  cursor: pointer;
+}
+
+.codex-creature-pick-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Reutiliza .statblock-attack-row (fila flex + botón eliminar ya
+   delegado) pero con solo 3 columnas: nombre resuelto / cantidad / quitar. */
+.codex-creature-row {
+  grid-template-columns: 2fr 1fr auto;
 }
 
 .travel-compass {
@@ -764,7 +1224,7 @@ select {
 .travel-compass-center {
   background: rgba(255, 255, 255, 0.1);
   border: 2px solid rgba(255, 255, 255, 0.35);
-  color: rgba(255, 255, 255, 0.6);
+  color: color-mix(in srgb, var(--text) 60%, transparent);
   font-weight: bold;
 }
 
@@ -780,7 +1240,7 @@ select {
 }
 
 .form-field label {
-  color: #000;
+  color: var(--panel-bg-text);
   letter-spacing: 0.04em;
 }
 
@@ -853,6 +1313,21 @@ select {
   gap: 8px;
 }
 
+/* Subcabecera de grupo dentro del panel Acciones (DJ / Jugadores): mismo
+   tratamiento discreto que .encounter-field-label, no un nuevo componente. */
+.action-group-label {
+  font-weight: bold;
+  opacity: 0.7;
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 10px 0 4px;
+}
+
+.action-group-label:first-child {
+  margin-top: 0;
+}
+
 .encounter-actions {
   display: flex;
   flex-wrap: wrap;
@@ -922,8 +1397,8 @@ select {
   width: auto;
   min-width: 0;
   margin: 8px 0 0;
-  background: rgb(168, 168, 168);
-  color: #000;
+  background: var(--panel-bg);
+  color: var(--panel-bg-text);
   border-top: 2px solid #000;
   padding: 4px 8px;
   display: flex;
@@ -1080,7 +1555,7 @@ select {
 }
 
 .about-facts a:hover {
-  color: rgb(0, 0, 168);
+  color: var(--app-bg);
 }
 
 .about-startup-checkbox {
@@ -1122,8 +1597,8 @@ select {
    rojo: no es un peligro real, es un aviso de procedimiento). */
 .lighting-status {
   font-weight: bold;
-  color: rgb(255, 176, 0);
-  border: 1px solid rgb(255, 176, 0);
+  color: var(--warning);
+  border: 1px solid var(--warning);
   padding: 3px 6px;
   margin-bottom: 6px;
   text-align: center;
@@ -1151,10 +1626,10 @@ select {
 }
 
 .initiative-rail-item.current {
-  background: rgb(255, 255, 0);
-  color: #000;
+  background: var(--focus);
+  color: var(--focus-text);
   font-weight: bold;
-  border-color: #000;
+  border-color: var(--focus-text);
 }
 
 .initiative-rail-item.inactive {
@@ -1229,12 +1704,12 @@ select {
 }
 
 .dice-comparison-success {
-  color: rgb(0, 255, 255);
+  color: var(--progress-normal);
   font-weight: bold;
 }
 
 .dice-comparison-fail {
-  color: rgb(255, 176, 0);
+  color: var(--warning);
   font-weight: bold;
 }
 
@@ -1365,4 +1840,120 @@ select {
 
 .app-window.maximized #combatView > .two-col {
   grid-template-columns: 1fr;
+}
+
+/* --- Temas: overrides de utilidades TuiCss --------------------------- */
+/* TuiCss (vendor) sigue siendo la base visual: no se toca tui.css. Estas
+   utilidades (.white-168/.white-255/.black-255-text) son las que usan los
+   popups y prácticamente todos los botones de la app para su "chrome"
+   claro, así que repintarlas aquí es lo que realmente re-tematiza la
+   aplicación entera sin reimplementar cada componente. Mismo mecanismo que
+   ya usaba custom.css antes de este sistema de temas (sobrescribir
+   utilidades vendor), solo que ahora vía variable en vez de color fijo. */
+/* Gap preexistente del sistema de temas (no introducido por Fósforo
+   Verde): tui.css fija el fondo de .tui-panel (Grupo/Luz/Efectos/
+   Acciones/Encuentro/Log...) en rgb(0, 0, 168) sin variable. En EGA Azul
+   era invisible porque --app-bg por defecto es ese mismo azul; en
+   cualquier otro tema (Fósforo incluido) se veía el azul vendor sin
+   re-tematizar. */
+.tui-panel {
+  background-color: var(--app-bg) !important;
+}
+
+.white-168 {
+  background-color: var(--panel-bg) !important;
+}
+
+.white-255 {
+  background-color: var(--button-bg) !important;
+}
+
+.black-255-text {
+  color: var(--panel-bg-text) !important;
+}
+
+/* Marco doble de fieldset (estructura sin cambios: 6px double, solo el
+   color). Igual para el sub-marco de inputs con foco propio (amarillo por
+   defecto -> color de foco del tema). */
+.tui-fieldset,
+.tui-input-fieldset {
+  border-color: var(--border);
+}
+
+.tui-input-fieldset:hover {
+  border-color: var(--focus);
+}
+
+.tui-input-fieldset:hover legend {
+  color: var(--focus);
+}
+
+.tui-checkbox input:checked ~ span::after {
+  color: var(--focus);
+}
+
+.tui-radio input:checked ~ span:after {
+  color: var(--focus);
+}
+
+.tui-input:focus {
+  background-color: var(--focus) !important;
+  color: var(--focus-text) !important;
+}
+
+/* --- Ajustes: vista previa de tema ------------------------------------ */
+.settings-theme-preview {
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+}
+
+.settings-theme-preview-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.settings-preview-chip {
+  padding: 2px 8px;
+  font-weight: bold;
+}
+
+.settings-preview-dungeon {
+  background: var(--mode-dungeon);
+  color: var(--mode-dungeon-text);
+}
+
+.settings-preview-wilderness {
+  background: var(--mode-wilderness);
+  color: var(--mode-wilderness-text);
+}
+
+.settings-preview-combat {
+  background: var(--mode-combat);
+  color: var(--mode-combat-text);
+}
+
+.settings-preview-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.settings-preview-selected,
+.settings-preview-normal {
+  padding: 2px 8px;
+}
+
+.settings-preview-selected {
+  background: var(--focus);
+  color: var(--focus-text);
+  font-weight: bold;
+}
+
+.settings-preview-normal {
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.35);
 }

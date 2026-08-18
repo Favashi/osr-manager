@@ -29,6 +29,20 @@
     });
   }
 
+  // Único punto que traduce targetIds -> texto para logs (Mazmorra y
+  // Combate comparten esta función; evita reconstruir la lista de nombres
+  // en cada motor). Puramente descriptivo, no afecta a las reglas.
+  function effectTargetsLabel(state, effect) {
+    const ids = Array.isArray(effect.targetIds) ? effect.targetIds : [];
+    const names = ids.map(function (id) {
+      const member = state.party.find(function (m) { return m.id === id; });
+      return member ? member.name : null;
+    }).filter(Boolean);
+    if (!names.length) return 'objetivo desconocido';
+    if (names.length <= 3) return names.join(', ');
+    return names.length + ' objetivos';
+  }
+
   function updateExplorationEffects(state, minutes, options) {
     const opts = options || {};
     (state.dungeon.effects || []).forEach(function (effect) {
@@ -42,7 +56,7 @@
       effect.duration = Math.max(0, effect.duration - decrement);
       if (effect.duration <= 0) {
         effect.active = false;
-        NS.addLog(state, 'Finaliza ' + effect.name + ' sobre ' + effect.character + '.');
+        NS.addLog(state, 'Finaliza ' + effect.name + ' sobre ' + effectTargetsLabel(state, effect) + '.');
       }
     });
   }
@@ -51,6 +65,7 @@
     advanceClockByMinutes: advanceClockByMinutes,
     consumeLightSources: consumeLightSources,
     updateExplorationEffects: updateExplorationEffects,
+    effectTargetsLabel: effectTargetsLabel,
 
     toggleLightSource: function (state, sourceId) {
       const source = state.dungeon.lightSources.find(function (item) {
@@ -185,8 +200,13 @@
       }
       const summary = (selected && selected.text) ? selected.text : 'Ningún encuentro';
       const detail = selected && selected.text ? NS.resolveEncounterDetail(state, selected.text) : { type: 'none', name: 'Ningún encuentro', quantity: '0' };
-      const moraleRoll = selected && selected.text && quantityTotal > 0 ? NS.rollMoraleCheck(state) : null;
-      const reactionRoll = selected && selected.text && detail.type === 'npc' ? NS.rollReactionCheck(state) : null;
+      // Al descubrir un encuentro se tira REACCIÓN (disposición inicial:
+      // hostil/cauto/amistoso...), no Moral — Moral es la prueba de
+      // aguante en combate (si el grupo enemigo flaquea y huye), que este
+      // motor todavía no automatiza. Aplica a cualquier tipo de encuentro
+      // con presencia real, no solo a PNJ: un grupo de monstruos también
+      // reacciona al toparse con el grupo.
+      const reactionRoll = selected && selected.text && quantityTotal > 0 ? NS.rollReactionCheck(state) : null;
 
       return {
         roll: roll,
@@ -202,7 +222,6 @@
         role: detail.role || '',
         note: detail.note || '',
         reaction: reactionRoll ? reactionRoll.summary : null,
-        morale: moraleRoll ? moraleRoll.summary : null,
         encounterName: detail.name || summary
       };
     },

@@ -31,7 +31,7 @@
       effect.duration = Math.max(0, Number(effect.duration || 0) - 1);
       if (effect.duration <= 0) {
         effect.active = false;
-        NS.addLog(state, 'Finaliza ' + effect.name + ' sobre ' + effect.character + '.');
+        NS.addLog(state, 'Finaliza ' + effect.name + ' sobre ' + NS.dungeon.effectTargetsLabel(state, effect) + '.');
       }
     });
   }

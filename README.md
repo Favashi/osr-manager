@@ -1,50 +1,86 @@
 # OSR Manager
 
-Herramienta portable para gestionar exploración, hexcrawl, encuentros y
-combate en juegos OSR.
+Una ayuda de mesa para directores de juego OSR: exploración, encuentros,
+combate, tiempo, luz y recursos — sin convertir la partida en un VTT.
 
-Aplicación 100% cliente: HTML + CSS + JavaScript, sin backend, sin
-instalación, sin build. Funciona directamente abriendo `index.html`, y
-también puede publicarse como página estática mediante GitHub Pages — es la
-misma aplicación en ambos casos, no dos versiones distintas.
+**[▶ Abrir online](https://favashi.github.io/osr-manager/app/)** ·
+**[↓ Descargar última versión](https://github.com/Favashi/osr-manager/releases/latest/download/osr-manager.zip)** ·
+[GitHub Releases](https://github.com/Favashi/osr-manager/releases/latest)
 
-**Versión actual:** 0.2.0 — ver [`CHANGELOG.md`](CHANGELOG.md) para el
-historial completo de cambios.
+Ver [`CHANGELOG.md`](CHANGELOG.md) para el historial completo de cambios.
 
-## Estado del proyecto
+## Qué es
+
+OSR Manager es una herramienta portable para directores de juego (DJ) de
+RPG old-school (D&D clásico y sistemas emparentados: OSE, B/X, BECMI,
+LotFP, OD&D, AD&D 1e, y perfiles de la comunidad hispana como Aventuras en
+la Marca del Este). Gestiona el trabajo repetitivo de mesa — turnos, luz,
+efectos, encuentros, viaje por hexes, iniciativa — desde el navegador,
+offline y sin instalación.
+
+## Filosofía
+
+OSR Manager no pretende sustituir los libros, fichas, dados o mapas. Está
+diseñado para encargarse de las tareas repetitivas mientras el director
+sigue centrado en la partida.
+
+**Menos gestión. Más partida.**
+
+**No es un VTT.** No hay mapas tácticos, tokens, niebla de guerra ni
+movimiento por casillas. Tus dados, fichas, mapas y libros siguen estando
+en la mesa.
+
+## Funcionalidades
+
+Estado real del código en este repositorio (no una lista aspiracional):
 
 Implementado:
 
-- Modo **Mazmorra** (turnos, luz, efectos, descanso, encuentros).
-- Modo **Exterior** (hexcrawl: viaje por hexes con popup de dirección,
-  terreno, recursos, clima, caza, campamento).
-- Modo **Combate** (iniciativa, daño/curación, estados, moral y reacción
-  preparados a nivel de datos).
-- **Ruleset Core**: arquitectura de sistemas de reglas por campaña
-  (base + overrides), con ventana "Reglas..." para seleccionar, ver
-  detalles y personalizar el ruleset activo.
+- Modo **Mazmorra** (turnos, luz, efectos, descansos, exploración,
+  encuentros, ubicación actual).
+- Modo **Exterior** (hexcrawl: viaje por hexes, terreno, recursos, clima,
+  caza, campamento, encuentros).
+- Modo **Combate** (iniciativa, rondas, daño/curación, estados, moral y
+  reacción a nivel de datos).
+- **Ruleset Core**: arquitectura de sistemas de reglas por campaña (base +
+  overrides), con ventana "Reglas..." para seleccionar, ver detalles y
+  personalizar el ruleset activo.
+- **Dice Engine**: parser propio de expresiones de dados (sin `eval`) —
+  `2d6+1d4+3`, comparaciones, `d%`, `d66`.
+- **Statblock Importer**: pega un statblock (OSE, La Marca del Este y
+  formatos OSR similares), analízalo y revísalo antes de guardarlo. Nunca
+  se guarda nada automáticamente.
+- **Codex** *(en desarrollo — MVP funcional, sigue creciendo)*: biblioteca
+  de Monstruos / PNJ / Encuentros, combinando una Biblioteca global del
+  navegador con el contenido de la campaña actual, sin duplicar registros.
 
-En desarrollo / previsto (no confundir con lo anterior):
+Previsto, todavía no implementado:
 
-- Compendio de monstruos/objetos y motor de encuentros avanzado.
-- Implementación funcional completa de moral, reacción y sorpresa (hoy la
-  infraestructura de reglas ya las modela, pero el procedimiento de juego
-  todavía no está implementado en el motor).
-- Salvaciones, clases, hechizos, ataques automáticos, tablas de combate
-  completas, experiencia y progresión de nivel.
+- Encuentro rápido (llevar un encuentro generado directamente a combate).
+- Tablas (más allá de la referencia mínima actual) y tesoro.
+- Implementación funcional completa de moral/reacción/sorpresa como
+  procedimiento de juego (hoy Ruleset Core ya modela los datos, el motor
+  todavía no automatiza el procedimiento).
+- Salvaciones, clases, hechizos, ataques automáticos, progresión de nivel.
 
-## Características
+## Modos
 
-- Interfaz de estética Turbo Vision / DOS (TuiCss), con paneles, menús y
-  ventanas modales consistentes en los tres modos.
-- Guardado local en el navegador + exportar/importar campaña como JSON.
-- Atajos de teclado para las acciones más comunes.
+- **Mazmorra** — turnos, tiempo, luz, efectos, descansos y encuentros.
+- **Exterior** — hexcrawl: viaje por hexes, terreno, recursos, clima, caza
+  y campamento.
+- **Combate** — iniciativa, rondas, PG, estados, moral y combatientes.
+
+## Utilidades
+
+- **Dados** — expresiones como `2d6+1d4+3`, `d100`, `d66`.
+- **PX** — calculadora rápida de experiencia.
+- **Statblocks** — importa monstruos y PNJ desde texto.
+- **Codex** — biblioteca personal de consulta *(en desarrollo)*.
 
 ## Sistemas compatibles
 
-La arquitectura de reglas (`js/rules/`) está preparada para
-sistemas OSR clásicos emparentados con D&D clásico. Rulesets soportados /
-en proceso de integración:
+La arquitectura de reglas (`js/rules/`) está preparada para sistemas OSR
+clásicos emparentados con D&D clásico:
 
 - Aventuras en la Marca del Este
 - Old-School Essentials (OSE)
@@ -56,142 +92,142 @@ en proceso de integración:
 
 Cada perfil declara identificadores, familia y parámetros de configuración
 (duración de turno, dado de iniciativa, modo de CA ascendente/descendente,
-costes de terreno, etc.). Donde un manual concreto todavía no tiene un valor
-confirmado, el ruleset hereda el valor genérico en vez de inventar una
-regla — ver el propio código en `js/rules/` para el detalle
-exacto de cada perfil.
+costes de terreno, etc.). Donde un manual concreto todavía no tiene un
+valor confirmado, el ruleset hereda el valor genérico en vez de inventar
+una regla. El grado de automatización puede variar según el sistema — ver
+el propio código en `js/rules/` para el detalle exacto de cada perfil.
 
 No es un motor universal de rol: el alcance se limita deliberadamente a
 sistemas OSR derivados o cercanos a D&D clásico.
 
-## Ejecución portable
+## Uso online
+
+**[Abrir OSR Manager](https://favashi.github.io/osr-manager/app/)** —
+publicado mediante GitHub Pages, sin instalación.
+
+La landing en la raíz del sitio (`https://favashi.github.io/osr-manager/`)
+explica el proyecto; `/app/` es la aplicación real, idéntica a la versión
+portable.
+
+## Uso portable / offline
+
+1. Descargar
+   [`osr-manager.zip`](https://github.com/Favashi/osr-manager/releases/latest/download/osr-manager.zip)
+   (siempre apunta a la última versión publicada).
+2. Descomprimir.
+3. Abrir `index.html` (doble clic, o arrastrarlo a un navegador).
 
 No requiere instalación. No requiere backend. No requiere Node para jugar.
-
-1. Descargar o clonar este repositorio.
-2. Abrir `index.html` (doble clic, o arrastrarlo a un navegador).
-3. Utilizar OSR Manager.
-
 Funciona completamente offline mediante `file://`.
 
-**Limitación conocida de `file://`:** el guardado automático usa
-`localStorage`, cuyo almacenamiento depende del origen (`file://` es un
-origen distinto de una URL `https://`). Ver la sección
-[Datos y persistencia](#datos-y-persistencia).
+Alternativa: clonar este repositorio y abrir `index.html` directamente —
+es el mismo punto de entrada que usa el ZIP.
 
-## GitHub Pages
-
-Además de la versión portable, este repositorio incluye un workflow para
-publicar la misma aplicación en GitHub Pages, junto con una landing:
-
-- **Raíz del sitio** (`/`) — landing: qué es OSR Manager, modos, sistemas
-  compatibles, enlace a la app y al repositorio. Fuente: `site/index.html`.
-- **`/app/`** — la aplicación real, idéntica a abrir `index.html` en local.
-
-El `index.html` de la raíz del repositorio **no cambia de función**: sigue
-siendo el punto de entrada portable (`file://`, doble clic). El workflow lo
-copia a `/app/` del sitio publicado; no se publica en la raíz del sitio.
-
-La publicación **no es automática**: ningún commit ni pull request dispara
-un despliegue. Se publica bajo demanda:
-
-```text
-GitHub
-→ Actions
-→ Publish GitHub Pages
-→ Run workflow
-→ seleccionar rama
-→ Run workflow
-```
-
-El workflow debe estar disponible desde la rama principal/por defecto del
-repositorio.
-
-### Configuración inicial (una sola vez por repositorio)
-
-Antes de poder publicar por primera vez:
-
-```text
-Settings
-→ Pages
-→ Build and deployment
-→ Source
-→ GitHub Actions
-```
-
-**No** usar la opción "Deploy from a branch" — la fuente de publicación de
-este proyecto es GitHub Actions.
-
-### Aviso de visibilidad
-
-El repositorio puede ser privado, pero los archivos publicados mediante
-GitHub Pages deben considerarse **públicamente accesibles**. Por tanto: no
-incluir secretos ni información privada en lo que se publica. El workflow
-solo copia explícitamente los archivos necesarios para ejecutar la
-aplicación (ver `.github/workflows/pages.yml`); no publica el repositorio
-completo.
-
-## Datos y persistencia
+## Guardado
 
 OSR Manager guarda la campaña activa en el `localStorage` del navegador.
 
-`file://` y una URL de GitHub Pages (`https://usuario.github.io/...`) son
-**orígenes distintos** para el navegador, así que no comparten
-`localStorage` entre sí. Una campaña guardada en la versión portable no
-aparecerá automáticamente en la versión web, y viceversa. No existe (ni está
-previsto en esta fase) ningún mecanismo de sincronización entre ambas.
+`file://` y la URL de GitHub Pages son **orígenes distintos** para el
+navegador, así que no comparten `localStorage` entre sí — tampoco lo
+comparten dos ZIP descomprimidos en carpetas distintas. Una campaña
+guardada en un origen no aparece automáticamente en otro.
 
-Para mover una campaña entre la versión portable y la versión web, usar:
+Para mover una campaña entre orígenes (portable ↔ online, o entre
+ordenadores), usar:
 
 ```text
 Archivo → Exportar   (genera un .json)
 Archivo → Importar   (carga ese .json)
 ```
 
-## Estructura del proyecto
+## Roadmap
 
 ```text
-index.html               Punto de entrada de la aplicación (portable, file://)
-css/                      TuiCss + overrides propios (custom.css) + fuentes e imágenes
-js/                        Lógica de la app (estado, motores de Mazmorra/Exterior/Combate, Ruleset Core en js/rules/)
-
-site/index.html           Landing publicada en la raíz de GitHub Pages (no afecta a la versión portable)
-
-.github/workflows/       Workflow de publicación manual a GitHub Pages (landing en / + app en /app/)
-licenses/                 Textos de licencia de terceros (ver THIRD_PARTY_NOTICES.md)
-
-README.md                 Este documento
-CHANGELOG.md               Historial de versiones
-LICENSE                    Licencia MIT del código original del proyecto
-THIRD_PARTY_NOTICES.md     Contenido/componentes de terceros y su licencia
-.gitignore
+[x] Mazmorra / Exterior / Combate
+[x] Dice Engine / Ruleset Core
+[x] Importador de statblocks
+[>] Codex
+[ ] Encuentro rápido
+[ ] Tablas / Tesoro
 ```
+
+Ver [`CHANGELOG.md`](CHANGELOG.md) para el detalle de cada versión.
 
 ## Desarrollo
 
-OSR Manager no tiene build ni dependencias de runtime. No hay `package.json`
-en el proyecto todavía: no existen (por ahora) importadores, generador de
-compendios ni suite de tests con Node — si en el futuro se añaden, serán
-**dependencia de desarrollo únicamente**, nunca necesaria para ejecutar o
-jugar la aplicación.
+OSR Manager no tiene build ni dependencias de runtime. No hay
+`package.json`: no existen (por ahora) tests con Node — si en el futuro se
+añaden, serán **dependencia de desarrollo únicamente**, nunca necesaria
+para ejecutar o jugar la aplicación.
 
 La única comprobación automatizada existente hoy es una validación de
-sintaxis JavaScript (`node --check`) que corre el propio workflow de Pages
-antes de publicar — no requiere instalar nada, usa el Node ya presente en
-el runner de GitHub Actions.
+sintaxis JavaScript (`node --check`) que corre el propio workflow de
+publicación antes de desplegar — no requiere instalar nada, usa el Node ya
+presente en el runner de GitHub Actions.
 
-## Publicación manual
+`VERSION` es la fuente única de versión del proyecto (usada por la
+Release, el ZIP y la landing). Al preparar una nueva versión: actualizar
+`VERSION`, la línea "Versión:" de la ventana *Acerca de* en `index.html`, y
+añadir la entrada correspondiente en `CHANGELOG.md`.
 
-1. Hacer commit/push de los cambios.
-2. Comprobar qué rama se quiere publicar.
-3. Abrir **Actions** en GitHub.
-4. Seleccionar **Publish GitHub Pages**.
-5. Pulsar **Run workflow**.
-6. Seleccionar la rama.
-7. Confirmar.
-8. Esperar a que termine el deployment (job `deploy`).
-9. Abrir la URL de Pages indicada en el resumen del job o en
-   Settings → Pages.
+### Estructura del proyecto
+
+```text
+index.html                 Punto de entrada de la aplicación (portable, file://)
+VERSION                    Fuente única de versión (usada por Release/ZIP/landing)
+css/                        TuiCss + overrides propios (custom.css) + fuentes e imágenes
+js/                          Lógica de la app: estado, motores de Mazmorra/Exterior/Combate,
+                             Dice Engine, Statblock Importer, Codex (repository.js),
+                             Ruleset Core en js/rules/
+
+site/index.html             Landing publicada en la raíz de GitHub Pages (no afecta a la
+                             versión portable)
+
+.github/workflows/         Workflow de publicación manual: GitHub Pages y, opcionalmente,
+                             Release + osr-manager.zip
+licenses/                   Textos de licencia de terceros (ver THIRD_PARTY_NOTICES.md)
+
+README.md                   Este documento
+CHANGELOG.md                 Historial de versiones
+LICENSE                      Licencia MIT del código original del proyecto
+THIRD_PARTY_NOTICES.md       Contenido/componentes de terceros y su licencia
+.gitignore
+```
+
+### Publicación manual
+
+Un único workflow, dos modos:
+
+```text
+GitHub
+→ Actions
+→ Publish (Pages + Release)
+→ Run workflow
+```
+
+**Solo Pages** (`Publicar release` = false): actualiza la landing y la
+app publicadas. No crea tag ni Release.
+
+**Pages + Release** (`Publicar release` = true, indicando `Versión`):
+valida que la versión coincide con `VERSION`, construye `osr-manager.zip`,
+despliega Pages, crea el tag `vX.Y.Z`, publica la GitHub Release y adjunta
+el ZIP. Si el tag ya existe, falla sin sobrescribir nada.
+
+Requiere, una sola vez por repositorio:
+
+```text
+Settings → Pages → Build and deployment → Source → GitHub Actions
+```
+
+**No** usar la opción "Deploy from a branch".
+
+### Aviso de visibilidad
+
+El repositorio puede ser privado, pero los archivos publicados mediante
+GitHub Pages y los assets de una Release deben considerarse **públicamente
+accesibles**. El workflow solo copia/empaqueta explícitamente lo necesario
+para ejecutar la aplicación (ver `.github/workflows/pages.yml`); no publica
+el repositorio completo.
 
 ## Compendios y contenido de terceros
 
@@ -206,10 +242,6 @@ ejemplo basado en Old-School Essentials), se documentará aquí y en
 `THIRD_PARTY_NOTICES.md` con su origen y licencia exactos — nunca se
 asumirá que un dataset externo es MIT solo porque el código del proyecto lo
 sea.
-
-## Changelog
-
-Ver [`CHANGELOG.md`](CHANGELOG.md) para el historial de versiones.
 
 ## Licencia
 

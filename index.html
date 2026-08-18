@@ -6,6 +6,22 @@
     <title>OSR Manager</title>
     <link rel="stylesheet" href="css/tui.css" />
     <link rel="stylesheet" href="css/custom.css" />
+    <script>
+      // Aplica el tema guardado antes del primer pintado para evitar un
+      // flash "EGA Azul -> tema real". Duplicado intencional del listado de
+      // temas válidos de js/app.js (THEME_IDS): este script debe ejecutarse
+      // antes de que app.js cargue, así que no puede depender de él.
+      (function () {
+        var VALID_THEMES = ['ega-blue', 'amber', 'green', 'mono', 'cga', 'phosphor'];
+        try {
+          var raw = localStorage.getItem('osr-manager-preferences');
+          var theme = raw ? JSON.parse(raw).theme : null;
+          document.documentElement.dataset.theme = VALID_THEMES.indexOf(theme) !== -1 ? theme : 'ega-blue';
+        } catch (error) {
+          document.documentElement.dataset.theme = 'ega-blue';
+        }
+      })();
+    </script>
   </head>
   <body>
     <div class="app-shell">
@@ -13,7 +29,7 @@
         <fieldset class="tui-fieldset app-fieldset">
           <div class="dos-menu-container">
             <div class="dos-menu-bar">
-              <button id="menuToggleBtn" class="dos-menu-icon" title="Menú" aria-label="Menú">≡</button>
+              <button id="menuToggleBtn" class="dos-menu-icon" title="Menú" aria-label="Menú">=</button>
               <span class="dos-app-name">OSR Manager</span>
               <div class="dos-menu-group">
                 <button class="dos-menu-trigger" data-menu="file">Archivo</button>
@@ -23,7 +39,7 @@
               </div>
               <div class="dos-menu-bar-right">
                 <span id="topClock" class="dos-clock">00:00:00</span>
-                <button id="windowSizeBtn" class="dos-window-button" title="Minimizar / restaurar" aria-label="Minimizar">▢</button>
+                <button id="windowSizeBtn" class="dos-window-button" title="Minimizar / restaurar" aria-label="Minimizar">o</button>
               </div>
             </div>
 
@@ -48,6 +64,11 @@
                 <button data-action="rules">Reglas...</button>
                 <button data-action="xpCalculator">Calculadora de PX...</button>
                 <button data-action="rest">Descanso corto</button>
+                <div class="dos-menu-separator"></div>
+                <button data-action="importStatblock">Importar statblock...</button>
+                <button data-action="codex">Codex...</button>
+                <div class="dos-menu-separator"></div>
+                <button data-action="settings">Ajustes...</button>
               </div>
               <div class="dos-menu-panel" data-menu-panel="help">
                 <button data-action="help">Ayuda</button>
@@ -58,8 +79,8 @@
           </div>
 
           <button id="campaignBarBtn" type="button" class="app-campaign-bar" data-action="editCampaign" title="Editar campaña">
-            <span id="campaignBarLabel">Campaña sin nombre · Aventura sin nombre</span>
-            <span id="campaignBarStatus">Día 1 · 08:00 · Mazmorra</span>
+            <span id="campaignBarLabel">Campaña sin nombre - Aventura sin nombre</span>
+            <span id="campaignBarStatus">Día 1 - 08:00 - Mazmorra</span>
           </button>
 
           <input id="importFileInput" type="file" accept="application/json" hidden />
@@ -72,21 +93,21 @@
 
           <div id="dungeonStatusStrip" class="status-strip active" data-mode="dungeon">
             <span><strong>Turno</strong> <span id="dungeonTurnValue">0</span></span>
-            <span class="strip-divider">│</span>
+            <span class="strip-divider">|</span>
             <span><strong>Hora</strong> <span id="dungeonTimeValue">08:00</span> <span id="dungeonPeriodValue" class="day-period"></span></span>
-            <span class="strip-divider">│</span>
+            <span class="strip-divider">|</span>
             <span><strong>Encuentro</strong> <span id="dungeonEncounterValue">No</span> <span id="dungeonEncounterClock" class="dungeon-clock"></span></span>
-            <span class="strip-divider">│</span>
+            <span class="strip-divider">|</span>
             <span><strong>Descanso</strong> <span id="dungeonRestValue">Nunca</span> <span id="dungeonRestClock" class="dungeon-clock"></span></span>
           </div>
 
           <div id="wildernessStatusStrip" class="status-strip" data-mode="wilderness">
             <span><strong>Día</strong> <span id="wildernessDayValue">1</span></span>
-            <span class="strip-divider">│</span>
+            <span class="strip-divider">|</span>
             <span><strong>Hora</strong> <span id="wildernessHourValue">08:00</span> <span id="wildernessPeriodValue" class="day-period"></span></span>
-            <span class="strip-divider">│</span>
+            <span class="strip-divider">|</span>
             <span><strong>Terreno</strong> <span id="wildernessTerrainValue">-</span></span>
-            <span class="strip-divider">│</span>
+            <span class="strip-divider">|</span>
             <span><strong>Hex</strong> <span id="wildernessHexValue">-</span></span>
           </div>
 
@@ -132,10 +153,15 @@
               <section id="dungeonView" class="view active">
                 <div class="tui-panel compact-panel">
                   <div class="tui-panel-header">Acciones</div>
-                  <div class="tui-panel-content action-list">
-                    <button id="advanceTurnBtn" class="tui-button white-255 black-255-text btn-primary">Avanzar turno</button>
-                    <button id="generateEncounterBtn" class="tui-button white-255 black-255-text">Generar encuentro</button>
-                    <button id="explorationActionsBtn" class="tui-button white-255 black-255-text">Acciones de exploración...</button>
+                  <div class="tui-panel-content">
+                    <div id="restStatus" class="lighting-status hidden">! DESCANSO PENDIENTE</div>
+                    <div class="action-group-label">DJ</div>
+                    <div class="action-list grid-two">
+                      <button id="advanceTurnBtn" class="tui-button white-255 black-255-text btn-primary" title="Avanzar turno">Avanzar</button>
+                      <button id="generateEncounterBtn" class="tui-button white-255 black-255-text" title="Generar encuentro">Encuentro</button>
+                    </div>
+                    <div class="action-group-label">Jugadores</div>
+                    <div id="dungeonPlayerActions" class="action-list grid-two"></div>
                   </div>
                 </div>
 
@@ -149,18 +175,34 @@
                     </div>
                   </div>
                 </div>
+
+                <div class="tui-panel compact-panel">
+                  <div class="tui-panel-header">
+                    Ubicación actual
+                    <button type="button" id="editLocationBtn" class="panel-add-btn" title="Editar ubicación">E</button>
+                  </div>
+                  <div class="tui-panel-content">
+                    <div id="dungeonLocationSummary" class="summary-box">Sin ubicación registrada.</div>
+                  </div>
+                </div>
               </section>
 
               <section id="wildernessView" class="view">
                 <div class="two-col">
                   <div class="tui-panel compact-panel">
                     <div class="tui-panel-header">Acciones</div>
-                    <div class="tui-panel-content action-list grid-two">
-                      <button id="travelBtn" class="tui-button white-255 black-255-text btn-primary">Viajar</button>
-                      <button id="exploreBtn" class="tui-button white-255 black-255-text">Explorar</button>
-                      <button id="huntBtn" class="tui-button white-255 black-255-text">Cazar</button>
-                      <button id="campBtn" class="tui-button white-255 black-255-text">Acampar</button>
-                      <button id="wildernessGenerateEncounterBtn" class="tui-button white-255 black-255-text">Encuentro</button>
+                    <div class="tui-panel-content">
+                      <div class="action-group-label">DJ</div>
+                      <div class="action-list">
+                        <button id="wildernessGenerateEncounterBtn" class="tui-button white-255 black-255-text" title="Generar encuentro">Encuentro</button>
+                      </div>
+                      <div class="action-group-label">Jugadores</div>
+                      <div class="action-list grid-two">
+                        <button id="travelBtn" class="tui-button white-255 black-255-text btn-primary">Viajar</button>
+                        <button id="exploreBtn" class="tui-button white-255 black-255-text">Explorar</button>
+                        <button id="huntBtn" class="tui-button white-255 black-255-text">Cazar</button>
+                        <button id="campBtn" class="tui-button white-255 black-255-text">Acampar</button>
+                      </div>
                     </div>
                   </div>
 
@@ -233,7 +275,7 @@
             <div class="tui-panel log-panel">
               <div class="tui-panel-header">
                 Log
-                <button type="button" class="panel-add-btn" id="logExpandBtn" title="Ver log completo">⤢</button>
+                <button type="button" class="panel-add-btn" id="logExpandBtn" title="Ver log completo">&gt;</button>
               </div>
               <div class="tui-panel-content">
                 <div id="sessionLog" class="session-log"></div>
@@ -243,11 +285,11 @@
 
           <div id="statusInfo" class="app-statusbar">
             <span>F1 Ayuda</span>
-            <span class="strip-divider">│</span>
+            <span class="strip-divider">|</span>
             <span>F2 Guardar</span>
-            <span class="strip-divider">│</span>
+            <span class="strip-divider">|</span>
             <span>F5 Dados</span>
-            <span class="strip-divider">│</span>
+            <span class="strip-divider">|</span>
             <span>F10 Menú</span>
             <span id="lastSavedIndicator" class="statusbar-save-indicator">Sin guardar</span>
           </div>
@@ -271,7 +313,7 @@
  ╚═════╝ ╚══════╝╚═╝  ╚═╝</pre>
             <div class="about-title">OSR MANAGER</div>
             <div class="about-facts">
-              <div>Versión: 0.2.0</div>
+              <div>Versión: 0.3.0</div>
               <div>Esquema de datos: v1</div>
               <div>Autor: Toni Ruiz [Favashi]</div>
               <div>Repositorio: <a href="https://github.com/Favashi/osr-manager" target="_blank" rel="noopener noreferrer">GitHub</a></div>
@@ -377,9 +419,9 @@
     </div>
 
     <div id="effectModal" class="tui-modal">
-      <div class="tui-window modal-window white-168 black-255-text">
+      <div class="tui-window modal-window modal-window--medium white-168 black-255-text">
         <fieldset class="tui-fieldset">
-          <legend>Añadir efecto</legend>
+          <legend id="effectModalLegend">Añadir efecto</legend>
           <button type="button" class="tui-fieldset-button" data-close-modal title="Cerrar">X</button>
           <div class="modal-body">
             <div class="form-field compact-field">
@@ -387,8 +429,15 @@
               <input id="effectNameInput" class="tui-input" type="text" placeholder="Bendición" />
             </div>
             <div class="form-field compact-field">
-              <label>Personaje</label>
-              <input id="effectCharacterInput" class="tui-input" type="text" placeholder="Personaje" />
+              <div class="effect-targets-header">
+                <label>Objetivos</label>
+                <div class="effect-targets-actions">
+                  <button type="button" id="effectTargetsAllBtn" class="link-button">Seleccionar todos</button>
+                  <button type="button" id="effectTargetsClearBtn" class="link-button">Limpiar</button>
+                </div>
+              </div>
+              <div id="effectTargetsList" class="compact-list effect-targets-list"></div>
+              <div id="effectTargetsError" class="effect-targets-error hidden">Selecciona al menos un personaje.</div>
             </div>
             <div class="form-field compact-field two-up">
               <div>
@@ -405,8 +454,38 @@
                 </select>
               </div>
             </div>
+            <div id="effectRemainingField" class="form-field compact-field hidden">
+              <label>Duración restante</label>
+              <input id="effectRemainingInput" class="tui-input" type="number" value="1" min="0" />
+            </div>
             <div class="modal-actions">
-              <button id="addEffectConfirmBtn" class="tui-button white-255 black-255-text btn-primary">Añadir</button>
+              <button id="effectConfirmBtn" class="tui-button white-255 black-255-text btn-primary">Añadir</button>
+              <button type="button" class="tui-button white-255 black-255-text" data-close-modal>Cancelar</button>
+            </div>
+          </div>
+        </fieldset>
+      </div>
+    </div>
+
+    <div id="effectDetailModal" class="tui-modal">
+      <div class="tui-window modal-window white-168 black-255-text">
+        <fieldset class="tui-fieldset">
+          <legend>Detalle de efecto</legend>
+          <button type="button" class="tui-fieldset-button" data-close-modal title="Cerrar">X</button>
+          <div id="effectDetailBody" class="modal-body"></div>
+        </fieldset>
+      </div>
+    </div>
+
+    <div id="effectDeleteConfirmModal" class="tui-modal">
+      <div class="tui-window modal-window white-168 black-255-text">
+        <fieldset class="tui-fieldset">
+          <legend>Eliminar efecto</legend>
+          <button type="button" class="tui-fieldset-button" data-close-modal title="Cerrar">X</button>
+          <div class="modal-body">
+            <div id="effectDeleteConfirmBody" class="summary-box">-</div>
+            <div class="modal-actions">
+              <button id="effectDeleteConfirmBtn" class="tui-button white-255 black-255-text btn-primary">Eliminar</button>
               <button type="button" class="tui-button white-255 black-255-text" data-close-modal>Cancelar</button>
             </div>
           </div>
@@ -470,7 +549,7 @@
             <div class="modal-actions">
               <button type="button" class="tui-button white-255 black-255-text" data-close-modal>Cerrar</button>
             </div>
-            <div class="tui-popup-footer">Enter Tirar │ Esc Cerrar</div>
+            <div class="tui-popup-footer">Enter Tirar | Esc Cerrar</div>
           </div>
         </fieldset>
       </div>
@@ -479,7 +558,7 @@
     <div id="diceHelpModal" class="tui-modal">
       <div class="tui-window modal-window white-168 black-255-text">
         <fieldset class="tui-fieldset">
-          <legend>Ayuda · Dados</legend>
+          <legend>Ayuda - Dados</legend>
           <button type="button" class="tui-fieldset-button" data-close-modal title="Cerrar">X</button>
           <div class="modal-body">
             <div class="summary-box">
@@ -487,7 +566,7 @@
               + - * /: aritmética, con precedencia normal<br>
               ( ): agrupar<br>
               &lt;= &gt;= &lt; &gt; = ==: comparación (éxito/fallo)<br>
-              d%: alias de d100 · d66: tabla (decenas+unidades)
+              d%: alias de d100 - d66: tabla (decenas+unidades)
             </div>
             <div class="summary-box">
               Ejemplos:<br>
@@ -511,6 +590,389 @@
           <legend>Tablas</legend>
           <button type="button" class="tui-fieldset-button" data-close-modal title="Cerrar">X</button>
           <div id="tablesModalBody" class="modal-body"></div>
+        </fieldset>
+      </div>
+    </div>
+
+    <div id="settingsModal" class="tui-modal">
+      <div class="tui-window modal-window modal-window--medium white-168 black-255-text">
+        <fieldset class="tui-fieldset">
+          <legend>Ajustes</legend>
+          <button type="button" class="tui-fieldset-button" data-close-modal title="Cerrar">X</button>
+          <div class="modal-body">
+            <div class="encounter-header">Apariencia</div>
+            <div class="form-field compact-field">
+              <label>Tema visual</label>
+              <select id="settingsThemeInput" class="tui-input">
+                <option value="ega-blue">EGA Azul</option>
+                <option value="amber">DOS Ámbar</option>
+                <option value="green">Terminal Verde</option>
+                <option value="mono">Monocromo</option>
+                <option value="cga">CGA Retro</option>
+                <option value="phosphor">Fósforo Verde</option>
+              </select>
+            </div>
+            <div class="form-field compact-field">
+              <label>Vista previa</label>
+              <div id="settingsThemePreview" class="settings-theme-preview">
+                <div class="settings-theme-preview-modes">
+                  <span class="settings-preview-chip settings-preview-dungeon">Mazmorra</span>
+                  <span class="settings-preview-chip settings-preview-wilderness">Exterior</span>
+                  <span class="settings-preview-chip settings-preview-combat">Combate</span>
+                </div>
+                <div class="settings-preview-row">
+                  <span class="settings-preview-selected">Fila seleccionada</span>
+                  <span class="settings-preview-normal">Fila normal</span>
+                </div>
+                <div class="ascii-progress tui-progress-bar">
+                  <span class="tui-progress" style="width:60%"></span>
+                </div>
+              </div>
+            </div>
+            <div class="modal-actions">
+              <button id="settingsApplyBtn" class="tui-button white-255 black-255-text btn-primary">Aplicar</button>
+              <button type="button" id="settingsCancelBtn" class="tui-button white-255 black-255-text" data-close-modal>Cancelar</button>
+            </div>
+            <div class="tui-popup-footer">Enter Aplicar | Esc Cancelar</div>
+          </div>
+        </fieldset>
+      </div>
+    </div>
+
+    <div id="statblockImportModal" class="tui-modal">
+      <div class="tui-window modal-window modal-window--medium white-168 black-255-text">
+        <fieldset class="tui-fieldset">
+          <legend>Importar statblock</legend>
+          <button type="button" class="tui-fieldset-button" data-close-modal title="Cerrar">X</button>
+          <div class="modal-body">
+            <div class="form-field compact-field">
+              <label>Tipo</label>
+              <select id="statblockTypeInput" class="tui-input">
+                <option value="auto">Detectar automáticamente</option>
+                <option value="monster">Monstruo</option>
+                <option value="npc">PNJ</option>
+              </select>
+            </div>
+            <div class="form-field compact-field">
+              <label>Statblock</label>
+              <textarea id="statblockTextInput" class="tui-input statblock-textarea" rows="10" placeholder="Pega aquí el texto del statblock..."></textarea>
+            </div>
+            <div class="modal-actions">
+              <button id="statblockAnalyzeBtn" class="tui-button white-255 black-255-text btn-primary">Analizar</button>
+              <button type="button" class="tui-button white-255 black-255-text" data-close-modal>Cancelar</button>
+            </div>
+            <div class="tui-popup-footer">Esc Cancelar</div>
+          </div>
+        </fieldset>
+      </div>
+    </div>
+
+    <div id="statblockReviewModal" class="tui-modal">
+      <div class="tui-window modal-window modal-window--large white-168 black-255-text">
+        <fieldset class="tui-fieldset">
+          <legend>Revisar statblock</legend>
+          <button type="button" class="tui-fieldset-button" data-close-modal title="Cerrar">X</button>
+          <div class="modal-body">
+            <div id="statblockWarningsList" class="statblock-warnings hidden"></div>
+
+            <div class="form-field compact-field two-up">
+              <div>
+                <label>Nombre</label>
+                <input id="sbReviewNameInput" class="tui-input" type="text" />
+              </div>
+              <div>
+                <label>Tipo</label>
+                <select id="sbReviewTypeInput" class="tui-input">
+                  <option value="monster">Monstruo</option>
+                  <option value="npc">PNJ</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-field compact-field two-up">
+              <div>
+                <label>DG</label>
+                <input id="sbReviewHdInput" class="tui-input" type="text" placeholder="1-1" />
+              </div>
+              <div>
+                <label>PG</label>
+                <input id="sbReviewHpInput" class="tui-input" type="number" />
+              </div>
+            </div>
+
+            <div class="form-field compact-field two-up">
+              <div>
+                <label>CA</label>
+                <input id="sbReviewAcDescInput" class="tui-input" type="number" />
+              </div>
+              <div>
+                <label>CA asc.</label>
+                <input id="sbReviewAcAscInput" class="tui-input" type="number" />
+              </div>
+            </div>
+
+            <div class="form-field compact-field two-up">
+              <div>
+                <label>Movimiento</label>
+                <input id="sbReviewMovementInput" class="tui-input" type="text" placeholder="60' (20')" />
+              </div>
+              <div>
+                <label>THAC0</label>
+                <input id="sbReviewThac0Input" class="tui-input" type="text" placeholder="19 [0]" />
+              </div>
+            </div>
+
+            <div class="form-field compact-field two-up">
+              <div>
+                <label>Alineamiento</label>
+                <input id="sbReviewAlignmentInput" class="tui-input" type="text" />
+              </div>
+              <div>
+                <label>BA</label>
+                <input id="sbReviewBaInput" class="tui-input" type="number" placeholder="+6" />
+              </div>
+            </div>
+
+            <div class="form-field compact-field two-up">
+              <div>
+                <label>Moral</label>
+                <input id="sbReviewMoraleValueInput" class="tui-input" type="number" />
+              </div>
+              <div>
+                <label>Moral (detalle)</label>
+                <input id="sbReviewMoraleRawInput" class="tui-input" type="text" placeholder="7 (9 with king)" />
+              </div>
+            </div>
+
+            <div class="form-field compact-field two-up">
+              <div>
+                <label>PX</label>
+                <input id="sbReviewXpValueInput" class="tui-input" type="number" />
+              </div>
+              <div>
+                <label>PX (detalle)</label>
+                <input id="sbReviewXpRawInput" class="tui-input" type="text" placeholder="5 (bodyguard: 20, king: 35)" />
+              </div>
+            </div>
+
+            <div class="form-field compact-field">
+              <label>Aparición</label>
+              <div class="two-up">
+                <div>
+                  <label>Mazmorra</label>
+                  <input id="sbReviewNaDungeonInput" class="tui-input" type="text" placeholder="2d4" />
+                </div>
+                <div>
+                  <label>Exterior</label>
+                  <input id="sbReviewNaWildernessInput" class="tui-input" type="text" placeholder="6d10" />
+                </div>
+              </div>
+            </div>
+
+            <div class="form-field compact-field two-up">
+              <div>
+                <label>Salvaciones</label>
+                <input id="sbReviewSavesInput" class="tui-input" type="text" />
+              </div>
+              <div>
+                <label>Tesoro</label>
+                <input id="sbReviewTreasureInput" class="tui-input" type="text" />
+              </div>
+            </div>
+
+            <div class="form-field compact-field">
+              <div class="effect-targets-header">
+                <label>Ataques</label>
+                <button type="button" id="sbReviewAddAttackBtn" class="link-button">Añadir ataque</button>
+              </div>
+              <div id="sbReviewAttacksList" class="statblock-attacks-list"></div>
+            </div>
+
+            <div class="form-field compact-field">
+              <div class="effect-targets-header">
+                <label>Habilidades</label>
+                <button type="button" id="sbReviewAddAbilityBtn" class="link-button">Añadir habilidad</button>
+              </div>
+              <div id="sbReviewAbilitiesList" class="statblock-attacks-list"></div>
+            </div>
+
+            <div class="form-field compact-field">
+              <label>Notas</label>
+              <textarea id="sbReviewNotesInput" class="tui-input statblock-textarea-small"></textarea>
+            </div>
+
+            <div id="sbReviewOriginalField" class="form-field compact-field">
+              <label>Statblock original</label>
+              <textarea id="sbReviewOriginalText" class="tui-input statblock-textarea-small" readonly></textarea>
+            </div>
+
+            <div class="form-field compact-field">
+              <label>Guardar en</label>
+              <div class="statblock-scope-options">
+                <label class="tui-radio">Biblioteca
+                  <input type="radio" name="sbReviewScope" id="sbReviewScopeLibrary" value="library" />
+                  <span></span>
+                </label>
+                <label class="tui-radio">Esta campaña
+                  <input type="radio" name="sbReviewScope" id="sbReviewScopeCampaign" value="campaign" checked />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="modal-actions">
+              <button id="sbReviewSaveBtn" class="tui-button white-255 black-255-text btn-primary">Guardar</button>
+              <button type="button" id="sbReviewBackBtn" class="tui-button white-255 black-255-text">Volver</button>
+              <button type="button" class="tui-button white-255 black-255-text" data-close-modal>Cancelar</button>
+            </div>
+            <div class="tui-popup-footer">Esc Cancelar</div>
+          </div>
+        </fieldset>
+      </div>
+    </div>
+
+    <div id="codexModal" class="tui-modal">
+      <div class="tui-window modal-window modal-window--large white-168 black-255-text">
+        <fieldset class="tui-fieldset">
+          <legend>Codex</legend>
+          <button type="button" class="tui-fieldset-button" data-close-modal title="Cerrar">X</button>
+          <div class="modal-body">
+            <div class="codex-tabs">
+              <button type="button" class="tui-button white-168 codex-tab-btn active" data-codex-tab="monster">Monstruos</button>
+              <button type="button" class="tui-button white-168 codex-tab-btn" data-codex-tab="npc">PNJ</button>
+              <button type="button" class="tui-button white-168 codex-tab-btn" data-codex-tab="encounter">Encuentros</button>
+            </div>
+
+            <div class="codex-toolbar">
+              <div class="form-field compact-field codex-search-field">
+                <label>Buscar</label>
+                <input id="codexSearchInput" class="tui-input" type="text" placeholder="Buscar..." />
+              </div>
+              <div class="form-field compact-field codex-scope-field">
+                <label>Mostrar</label>
+                <select id="codexScopeFilter" class="tui-input">
+                  <option value="all">Todo</option>
+                  <option value="library">Biblioteca</option>
+                  <option value="campaign">Esta campaña</option>
+                </select>
+              </div>
+              <div id="codexResultCount" class="codex-result-count">0 resultados</div>
+            </div>
+
+            <div id="codexList" class="codex-list"></div>
+
+            <div class="modal-actions">
+              <button type="button" id="codexNewBtn" class="tui-button white-255 black-255-text btn-primary">+ Nuevo</button>
+              <button type="button" id="codexImportBtn" class="tui-button white-255 black-255-text">Importar</button>
+              <button type="button" id="codexEditBtn" class="tui-button white-255 black-255-text" disabled>Editar</button>
+              <button type="button" id="codexDeleteBtn" class="tui-button white-255 black-255-text" disabled>Eliminar</button>
+              <button type="button" class="tui-button white-255 black-255-text" data-close-modal>Cerrar</button>
+            </div>
+            <div class="tui-popup-footer">^v Seleccionar | Enter Ver | Esc Cerrar</div>
+          </div>
+        </fieldset>
+      </div>
+    </div>
+
+    <div id="codexActorDetailModal" class="tui-modal">
+      <div class="tui-window modal-window modal-window--medium white-168 black-255-text">
+        <fieldset class="tui-fieldset">
+          <legend>Ficha</legend>
+          <button type="button" class="tui-fieldset-button" data-close-modal title="Cerrar">X</button>
+          <div id="codexActorDetailBody" class="modal-body codex-detail-body"></div>
+        </fieldset>
+      </div>
+    </div>
+
+    <div id="codexEncounterEditModal" class="tui-modal">
+      <div class="tui-window modal-window modal-window--medium white-168 black-255-text">
+        <fieldset class="tui-fieldset">
+          <legend id="codexEncounterEditLegend">Nuevo encuentro</legend>
+          <button type="button" class="tui-fieldset-button" data-close-modal title="Cerrar">X</button>
+          <div class="modal-body">
+            <div class="form-field compact-field">
+              <label>Nombre</label>
+              <input id="codexEncounterNameInput" class="tui-input" type="text" placeholder="Guardia del templo" />
+            </div>
+
+            <div class="form-field compact-field">
+              <div class="effect-targets-header">
+                <label>Criaturas</label>
+                <button type="button" id="codexEncounterAddCreatureBtn" class="link-button">+ Añadir criatura</button>
+              </div>
+              <div id="codexEncounterCreaturesList" class="statblock-attacks-list"></div>
+            </div>
+
+            <div class="form-field compact-field">
+              <label>Notas</label>
+              <textarea id="codexEncounterNotesInput" class="tui-input statblock-textarea-small"></textarea>
+            </div>
+
+            <div class="form-field compact-field">
+              <label>Guardar en</label>
+              <div class="statblock-scope-options">
+                <label class="tui-radio">Biblioteca
+                  <input type="radio" name="codexEncounterScope" id="codexEncounterScopeLibrary" value="library" />
+                  <span></span>
+                </label>
+                <label class="tui-radio">Esta campaña
+                  <input type="radio" name="codexEncounterScope" id="codexEncounterScopeCampaign" value="campaign" checked />
+                  <span></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" id="codexEncounterSaveBtn" class="tui-button white-255 black-255-text btn-primary">Guardar</button>
+              <button type="button" class="tui-button white-255 black-255-text" data-close-modal>Cancelar</button>
+            </div>
+            <div class="tui-popup-footer">Esc Cancelar</div>
+          </div>
+        </fieldset>
+      </div>
+    </div>
+
+    <div id="codexCreatureSearchModal" class="tui-modal">
+      <div class="tui-window modal-window white-168 black-255-text">
+        <fieldset class="tui-fieldset">
+          <legend>Añadir criatura</legend>
+          <button type="button" class="tui-fieldset-button" data-close-modal title="Cerrar">X</button>
+          <div class="modal-body">
+            <div class="form-field compact-field">
+              <label>Buscar</label>
+              <input id="codexCreatureSearchInput" class="tui-input" type="text" placeholder="Buscar..." />
+            </div>
+            <div id="codexCreatureSearchResults" class="statblock-attacks-list codex-creature-results"></div>
+            <div class="modal-actions">
+              <button type="button" class="tui-button white-255 black-255-text" data-close-modal>Cancelar</button>
+            </div>
+          </div>
+        </fieldset>
+      </div>
+    </div>
+
+    <div id="codexEncounterDetailModal" class="tui-modal">
+      <div class="tui-window modal-window white-168 black-255-text">
+        <fieldset class="tui-fieldset">
+          <legend>Encuentro</legend>
+          <button type="button" class="tui-fieldset-button" data-close-modal title="Cerrar">X</button>
+          <div id="codexEncounterDetailBody" class="modal-body codex-detail-body"></div>
+        </fieldset>
+      </div>
+    </div>
+
+    <div id="codexDeleteConfirmModal" class="tui-modal">
+      <div class="tui-window modal-window white-168 black-255-text">
+        <fieldset class="tui-fieldset">
+          <legend>Eliminar</legend>
+          <button type="button" class="tui-fieldset-button" data-close-modal title="Cerrar">X</button>
+          <div class="modal-body">
+            <div id="codexDeleteConfirmBody" class="summary-box">-</div>
+            <div class="modal-actions">
+              <button type="button" id="codexDeleteConfirmBtn" class="tui-button white-255 black-255-text btn-primary">Eliminar</button>
+              <button type="button" class="tui-button white-255 black-255-text" data-close-modal>Cancelar</button>
+            </div>
+          </div>
         </fieldset>
       </div>
     </div>
@@ -737,16 +1199,35 @@
       </div>
     </div>
 
-    <div id="explorationActionsModal" class="tui-modal">
+    <div id="locationModal" class="tui-modal">
       <div class="tui-window modal-window white-168 black-255-text">
         <fieldset class="tui-fieldset">
-          <legend>Acciones de exploración</legend>
+          <legend>Ubicación actual</legend>
           <button type="button" class="tui-fieldset-button" data-close-modal title="Cerrar">X</button>
           <div class="modal-body">
-            <div id="explorationActionsList" class="compact-list"></div>
-            <div class="modal-actions">
-              <button type="button" class="tui-button white-255 black-255-text" data-close-modal>Cerrar</button>
+            <div class="form-field compact-field">
+              <label>Nombre</label>
+              <input id="locationNameInput" class="tui-input" type="text" placeholder="Cripta occidental" />
             </div>
+            <div class="form-field compact-field two-up">
+              <div>
+                <label>Nivel</label>
+                <input id="locationLevelInput" class="tui-input" type="text" placeholder="1" />
+              </div>
+              <div>
+                <label>Referencia</label>
+                <input id="locationReferenceInput" class="tui-input" type="text" placeholder="Sala 14" />
+              </div>
+            </div>
+            <div class="form-field compact-field">
+              <label>Notas</label>
+              <textarea id="locationNotesInput" class="tui-input statblock-textarea-small" placeholder="Sarcófago abierto."></textarea>
+            </div>
+            <div class="modal-actions">
+              <button id="locationSaveBtn" class="tui-button white-255 black-255-text btn-primary">Guardar</button>
+              <button type="button" class="tui-button white-255 black-255-text" data-close-modal>Cancelar</button>
+            </div>
+            <div class="tui-popup-footer">Esc Cancelar</div>
           </div>
         </fieldset>
       </div>
@@ -975,7 +1456,7 @@
               <div class="list-item"><strong>Mazmorra:</strong> registra sala/nivel, gestiona luz y efectos activos, tira dados de exploración con F5.</div>
               <div class="list-item"><strong>Exterior:</strong> viaja por la rejilla hexagonal (F3 o el botón Viajar), consulta terreno y genera encuentros.</div>
               <div class="list-item"><strong>Combate:</strong> inicia combate, tira iniciativa, usa N para pasar turno y aplica daño/curación/estados a cada combatiente.</div>
-              <div class="list-item"><strong>Guardar:</strong> F2 guarda en el navegador; usa Archivo → Exportar/Importar para mover la campaña entre dispositivos.</div>
+              <div class="list-item"><strong>Guardar:</strong> F2 guarda en el navegador; usa Archivo -> Exportar/Importar para mover la campaña entre dispositivos.</div>
               <div class="list-item">Consulta <button type="button" class="link-button" data-open-modal="shortcutsModal" data-close-modal>Atajos de teclado</button> para el listado completo.</div>
               <div class="list-item">Más detalle en el <a href="https://github.com/Favashi/osr-manager" target="_blank" rel="noopener noreferrer">repositorio de GitHub</a>.</div>
             </div>
@@ -1001,7 +1482,7 @@
               <div class="list-item">F5 — Dados</div>
               <div class="list-item">F6 — Tablas</div>
               <div class="list-item">F10 — Menú</div>
-              <div class="list-item">↑ / ↓ — Seleccionar combatiente (en Combate)</div>
+              <div class="list-item">^ / v — Seleccionar combatiente (en Combate)</div>
               <div class="list-item">N — Siguiente turno (en Combate)</div>
               <div class="list-item">D — Daño (en Combate)</div>
               <div class="list-item">H — Curar (en Combate)</div>
@@ -1028,6 +1509,8 @@
     <script src="js/rules/custom.js"></script>
     <script src="js/state.js"></script>
     <script src="js/dice.js"></script>
+    <script src="js/statblock-parser.js"></script>
+    <script src="js/repository.js"></script>
     <script src="js/ui-list.js"></script>
     <script src="js/dungeon.js"></script>
     <script src="js/combat.js"></script>

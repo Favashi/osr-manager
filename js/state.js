@@ -27,6 +27,16 @@
         totalHp: 0,
         maxHp: 0
       },
+      // Contenido personalizado (Statblock Importer + Codex): pertenece a
+      // la campaña, no a preferencias globales — viaja en el JSON
+      // exportado y sobrevive a guardar/recargar/importar igual que el
+      // resto del estado. El Codex combina esto con la Biblioteca global
+      // (localStorage aparte, ver js/repository.js) sin duplicar registros.
+      customContent: {
+        monsters: [],
+        npcs: [],
+        encounters: []
+      },
       dungeon: {
         turn: 0,
         encounterCounter: 0,
@@ -42,7 +52,7 @@
           explorationActions: [
             { id: 'search', label: 'Buscar', consumesTurn: true, logText: 'El grupo busca en la zona.' },
             { id: 'listen', label: 'Escuchar', consumesTurn: false, logText: 'El grupo escucha con atención.' },
-            { id: 'force-door', label: 'Forzar puerta', consumesTurn: true, logText: 'El grupo fuerza una puerta.' }
+            { id: 'force-door', label: 'Forzar', consumesTurn: true, logText: 'El grupo fuerza una puerta.' }
           ]
         },
         lightSources: [],
@@ -57,7 +67,16 @@
             { range: '6', text: 'Sin encuentro', quantity: '0' }
           ]
         },
-        lastEncounter: null
+        lastEncounter: null,
+        // Ayuda puramente textual para recordar dónde está el grupo ahora
+        // mismo — NO es un mapa ni un grafo de salas. Todos los campos son
+        // opcionales.
+        location: {
+          name: '',
+          level: '',
+          reference: '',
+          notes: ''
+        }
       },
       wilderness: {
         terrain: 'forest',
@@ -246,7 +265,7 @@
     state.dungeon.effects.push({
       id: 'effect-1',
       name: 'Bendición',
-      character: 'Borin',
+      targetIds: ['pc-1'],
       duration: 2,
       initialDuration: 2,
       unit: 'turnos',

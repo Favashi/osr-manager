@@ -278,12 +278,12 @@
 
   function buildBreakdown(diceLog, total, comparison) {
     const dicePart = diceLog.map(function (d) {
-      const sep = d.kind === 'd66' ? '→' : '=';
-      return d.notation + ' → [' + d.rolls.join(', ') + '] ' + sep + ' ' + d.subtotal;
+      const sep = d.kind === 'd66' ? '->' : '=';
+      return d.notation + ' -> [' + d.rolls.join(', ') + '] ' + sep + ' ' + d.subtotal;
     }).join(', ');
-    let text = dicePart ? dicePart + ' → total ' + total : 'total ' + total;
+    let text = dicePart ? dicePart + ' -> total ' + total : 'total ' + total;
     if (comparison) {
-      text += ' | ' + comparison.operator + ' ' + comparison.target + ' → ' + (comparison.success ? 'ÉXITO' : 'FALLO');
+      text += ' | ' + comparison.operator + ' ' + comparison.target + ' -> ' + (comparison.success ? 'ÉXITO' : 'FALLO');
     }
     return text;
   }

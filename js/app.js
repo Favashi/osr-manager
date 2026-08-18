@@ -50,6 +50,24 @@
     return unit || '';
   }
 
+  function findPartyMember(party, id) {
+    return party.find(function (member) { return member.id === id; }) || null;
+  }
+
+  // Presentación compacta del/de los objetivo(s) de un efecto en la
+  // sidebar: 1 nombre -> el nombre; 2 -> "A, B"; 3+ -> "N objetivos" (evita
+  // que nombres largos o grupos completos desborden el panel).
+  function formatEffectTargets(effect, party) {
+    const ids = Array.isArray(effect.targetIds) ? effect.targetIds : [];
+    const names = ids.map(function (id) {
+      const member = findPartyMember(party, id);
+      return member ? member.name : null;
+    }).filter(Boolean);
+    if (!names.length) return 'Sin objetivos';
+    if (names.length <= 2) return names.join(', ');
+    return names.length + ' objetivos';
+  }
+
   // Reutilizable para cualquier recurso con duración (luz, efectos y,
   // más adelante, hechizos/venenos/fatiga/viaje). Sin max válido no hay
   // estado de progreso: quien llama debe mostrar solo texto en ese caso.
@@ -237,6 +255,14 @@
       lightingStatus.textContent = dark ? '! OSCURIDAD' : '';
     }
 
+    // Aviso de procedimiento (igual que la oscuridad): informa, no penaliza
+    // nada automáticamente. Descansar (acción de exploración) lo apaga.
+    const restStatus = document.getElementById('restStatus');
+    if (restStatus) restStatus.classList.toggle('hidden', !state.dungeon.restWarned);
+
+    renderDungeonLocation();
+    renderDungeonPlayerActions();
+
     const lightList = document.getElementById('lightSourcesList');
     lightList.innerHTML = '';
     const visibleLights = state.dungeon.lightSources.filter(function (source) {
@@ -257,7 +283,7 @@
         item.innerHTML =
           '<div class="duration-block light-row" data-light-toggle="' + escapeHtml(source.id) + '" title="Encender/apagar">' +
             '<div class="duration-row">' +
-              '<span class="name"><strong>' + escapeHtml(source.name) + '</strong> · ' + escapeHtml(source.carrier) + '</span>' +
+              '<span class="name"><strong>' + escapeHtml(source.name) + '</strong> - ' + escapeHtml(source.carrier) + '</span>' +
               '<span class="remaining" title="' + (source.lit ? 'Encendida' : 'Apagada') + '">' + (source.lit ? '[E]' : '[A]') + ' ' + remaining + 'm</span>' +
             '</div>' +
             renderAsciiProgress(remaining, max, { dimmed: !source.lit }) +
@@ -283,11 +309,13 @@
         const max = Number(effect.initialDuration);
         const current = Math.max(Number(effect.duration) || 0, 0);
         const item = document.createElement('div');
-        item.className = 'list-item';
+        item.className = 'list-item effect-row';
+        item.dataset.effectId = effect.id;
+        item.title = 'Ver detalle del efecto';
         item.innerHTML =
           '<div class="duration-block">' +
             '<div class="duration-row">' +
-              '<span class="name"><strong>' + escapeHtml(effect.name) + '</strong> · ' + escapeHtml(effect.character) + '</span>' +
+              '<span class="name"><strong>' + escapeHtml(effect.name) + '</strong> - ' + escapeHtml(formatEffectTargets(effect, state.party)) + '</span>' +
               '<span class="remaining">' + current + abbreviateUnit(effect.unit) + '</span>' +
             '</div>' +
             renderAsciiProgress(current, max) +
@@ -308,14 +336,14 @@
     document.getElementById('wildernessHexValue').textContent = wilderness.hex || '0,0';
 
     const statusText = 'Clima: ' + (wilderness.travel.weather || 'Claro') + '<br>' +
-      'Comida: ' + (wilderness.travel.food || 0) + ' · Agua: ' + (wilderness.travel.water || 0) + '<br>' +
-      'Fatiga: ' + (wilderness.travel.fatigue || 0) + ' · Movimiento: ' + (wilderness.movementRemaining || 0) + '/' + (wilderness.rules.movementPerDay || 6) + '<br>' +
+      'Comida: ' + (wilderness.travel.food || 0) + ' - Agua: ' + (wilderness.travel.water || 0) + '<br>' +
+      'Fatiga: ' + (wilderness.travel.fatigue || 0) + ' - Movimiento: ' + (wilderness.movementRemaining || 0) + '/' + (wilderness.rules.movementPerDay || 6) + '<br>' +
       'Coordenadas: q' + coords.q + ' / r' + coords.r;
     document.getElementById('wildernessStatus').innerHTML = statusText;
 
     const hexText = '<strong>' + escapeHtml(hex.name || hex.id) + '</strong><br>' +
       'Terreno: ' + escapeHtml(NS.wilderness.terrainLabel(hex.terrain || wilderness.terrain)) + '<br>' +
-      'Visitado: ' + (hex.visited ? 'Sí' : 'No') + ' · Descubierto: ' + (hex.discovered ? 'Sí' : 'No') + '<br>' +
+      'Visitado: ' + (hex.visited ? 'Sí' : 'No') + ' - Descubierto: ' + (hex.discovered ? 'Sí' : 'No') + '<br>' +
       'Ubicaciones: ' + ((hex.locations && hex.locations.length) ? escapeHtml(hex.locations.join(', ')) : 'Ninguna') + '<br>' +
       'Notas: ' + escapeHtml(hex.notes || 'Sin notas');
     document.getElementById('hexDetails').innerHTML = hexText;
@@ -377,7 +405,7 @@
     railEl.classList.remove('hidden');
     railEl.innerHTML =
       (hasBefore ? '<span class="initiative-rail-ellipsis">…</span>' : '') +
-      items.join('<span class="initiative-rail-sep">→</span>') +
+      items.join('<span class="initiative-rail-sep">-&gt;</span>') +
       (hasAfter ? '<span class="initiative-rail-ellipsis">…</span>' : '');
   }
 
@@ -387,7 +415,7 @@
   function renderModeStatus(items) {
     return items.map(function (item) {
       return '<span><strong>' + item[0] + '</strong> ' + item[1] + '</span>';
-    }).join('<span class="strip-divider">│</span>');
+    }).join('<span class="strip-divider">|</span>');
   }
 
   // Responde "¿en qué punto está el combate?" (a diferencia del rail, que
@@ -410,9 +438,9 @@
     if (!rolled) {
       el.innerHTML =
         '<span><strong>Ronda</strong> ' + (combat.round || 0) + '</span>' +
-        '<span class="strip-divider">│</span>' +
+        '<span class="strip-divider">|</span>' +
         '<span>Esperando iniciativa</span>' +
-        '<span class="strip-divider">│</span>' +
+        '<span class="strip-divider">|</span>' +
         '<span><strong>Activos</strong> ' + activosValue + '</span>';
       return;
     }
@@ -543,11 +571,11 @@
     const status = document.getElementById('campaignBarStatus');
     if (label) {
       const displayName = state.campaign.name || 'Sin campaña';
-      label.textContent = state.campaign.adventure ? displayName + ' · ' + state.campaign.adventure : displayName;
+      label.textContent = state.campaign.adventure ? displayName + ' - ' + state.campaign.adventure : displayName;
     }
     if (status) {
-      status.innerHTML = 'Día ' + state.worldTime.day + ' · ' + formatClock(state.worldTime.hour, state.worldTime.minute) +
-        ' · <span class="mode-name-accent">' + modeLabel + '</span>';
+      status.innerHTML = 'Día ' + state.worldTime.day + ' - ' + formatClock(state.worldTime.hour, state.worldTime.minute) +
+        ' - <span class="mode-name-accent">' + modeLabel + '</span>';
     }
   }
 
@@ -618,16 +646,67 @@
     if (primary) primary.focus();
   }
 
+  // --- Ajustes: tema visual --------------------------------------------
+  // Preferencia de aplicación+navegador (misma capa que "No mostrar Acerca
+  // de al iniciar"), nunca de campaña: no viaja en el JSON exportado.
+  const THEMES = [
+    { id: 'ega-blue', label: 'EGA Azul' },
+    { id: 'amber', label: 'DOS Ámbar' },
+    { id: 'green', label: 'Terminal Verde' },
+    { id: 'mono', label: 'Monocromo' },
+    { id: 'cga', label: 'CGA Retro' },
+    { id: 'phosphor', label: 'Fósforo Verde' }
+  ];
+  const DEFAULT_THEME = 'ega-blue';
+  let settingsSavedTheme = DEFAULT_THEME;
+
+  function isValidTheme(themeId) {
+    return THEMES.some(function (theme) { return theme.id === themeId; });
+  }
+
+  function getSavedTheme() {
+    const saved = NS.storage.loadPreferences().theme;
+    return isValidTheme(saved) ? saved : DEFAULT_THEME;
+  }
+
+  // Solo colores (custom.css consume esta variable vía [data-theme]): no
+  // toca layout, dimensiones, fuente ni Normal/Maximizado.
+  function applyTheme(themeId) {
+    const resolved = isValidTheme(themeId) ? themeId : DEFAULT_THEME;
+    document.documentElement.dataset.theme = resolved;
+    return resolved;
+  }
+
   function openModal(id) {
     const modal = document.getElementById(id);
     const overlap = document.getElementById('modalOverlap');
     if (!modal || !overlap) return;
     overlap.classList.add('active');
     modal.classList.add('active');
+    // Sin esto, dos popups activos a la vez (p.ej. Codex -> Importar
+    // statblock) se apilan por orden de aparición en el HTML, no por cuál
+    // se abrió después: el que esté escrito más abajo en index.html
+    // siempre pinta encima aunque se haya abierto primero. Mover el nodo
+    // al final de su mismo padre (sin clonarlo: conserva listeners,
+    // valores de formulario, dataset) hace que el último abierto quede
+    // siempre arriba, que es el comportamiento esperado.
+    modal.parentNode.appendChild(modal);
     focusFirstModalControl(modal);
   }
 
+  // Si settingsModal se cierra sin pasar por "Aplicar" (X, Cancelar, Esc,
+  // clic fuera), la vista previa en curso debe descartarse y volver
+  // exactamente al tema guardado — cualquier ruta de cierre pasa por
+  // closeModal/closeAllModals, así que basta revertir aquí una sola vez.
+  function revertSettingsPreviewIfActive() {
+    const modal = document.getElementById('settingsModal');
+    if (modal && modal.classList.contains('active')) {
+      applyTheme(settingsSavedTheme);
+    }
+  }
+
   function closeModal(id) {
+    if (id === 'settingsModal') revertSettingsPreviewIfActive();
     const modal = document.getElementById(id);
     if (modal) modal.classList.remove('active');
     if (!document.querySelector('.tui-modal.active')) {
@@ -637,11 +716,680 @@
   }
 
   function closeAllModals() {
+    revertSettingsPreviewIfActive();
     document.querySelectorAll('.tui-modal.active').forEach(function (modal) {
       modal.classList.remove('active');
     });
     const overlap = document.getElementById('modalOverlap');
     if (overlap) overlap.classList.remove('active');
+  }
+
+  function openSettingsModal() {
+    settingsSavedTheme = getSavedTheme();
+    const select = document.getElementById('settingsThemeInput');
+    if (select) select.value = settingsSavedTheme;
+    applyTheme(settingsSavedTheme);
+    openModal('settingsModal');
+  }
+
+  // --- Statblock Importer 1.0 -------------------------------------------
+  // Flujo: pegar -> analizar (js/statblock-parser.js) -> revisar/corregir
+  // -> guardar en state.customContent.monsters/npcs. El parser nunca
+  // guarda nada por sí solo; esta es la única ruta de guardado.
+  let pendingStatblockModel = null;
+
+  function openStatblockImportModal() {
+    const textInput = document.getElementById('statblockTextInput');
+    const typeInput = document.getElementById('statblockTypeInput');
+    if (textInput) textInput.value = '';
+    if (typeInput) typeInput.value = 'auto';
+    openModal('statblockImportModal');
+  }
+
+  function nullableNumber(value) {
+    if (value === '' || value === null || value === undefined) return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function nullableText(value) {
+    const trimmed = String(value || '').trim();
+    return trimmed || null;
+  }
+
+  function renderStatblockWarnings(warnings) {
+    const container = document.getElementById('statblockWarningsList');
+    if (!container) return;
+    if (!warnings || !warnings.length) {
+      container.innerHTML = '';
+      container.classList.add('hidden');
+      return;
+    }
+    container.classList.remove('hidden');
+    container.innerHTML = warnings.map(function (warning) {
+      return '<div class="statblock-warning-item">⚠ ' + escapeHtml(warning) + '</div>';
+    }).join('');
+  }
+
+  function renderStatblockAttackRow(attack) {
+    const row = document.createElement('div');
+    row.className = 'statblock-attack-row';
+    row.innerHTML =
+      '<input class="tui-input sb-attack-name" type="text" placeholder="Nombre" value="' + escapeHtml(attack && attack.name ? attack.name : '') + '" />' +
+      '<input class="tui-input sb-attack-count" type="number" min="1" placeholder="Cant." value="' + (attack && attack.count !== null && attack.count !== undefined ? attack.count : '') + '" />' +
+      '<input class="tui-input sb-attack-bonus" type="number" placeholder="Bono" value="' + (attack && attack.attackBonus !== null && attack.attackBonus !== undefined ? attack.attackBonus : '') + '" />' +
+      '<input class="tui-input sb-attack-damage" type="text" placeholder="Daño" value="' + escapeHtml(attack && attack.damage ? attack.damage : '') + '" />' +
+      '<button type="button" class="tui-button white-255 black-255-text sb-attack-remove" title="Eliminar ataque">X</button>';
+    if (attack && attack.raw) row.dataset.raw = attack.raw;
+    return row;
+  }
+
+  function renderStatblockAttacksList(attacks) {
+    const list = document.getElementById('sbReviewAttacksList');
+    if (!list) return;
+    list.innerHTML = '';
+    (attacks || []).forEach(function (attack) {
+      list.appendChild(renderStatblockAttackRow(attack));
+    });
+  }
+
+  function readStatblockAttacksFromForm() {
+    return Array.from(document.querySelectorAll('#sbReviewAttacksList .statblock-attack-row')).map(function (row) {
+      return {
+        name: nullableText(row.querySelector('.sb-attack-name').value),
+        count: nullableNumber(row.querySelector('.sb-attack-count').value),
+        attackBonus: nullableNumber(row.querySelector('.sb-attack-bonus').value),
+        damage: nullableText(row.querySelector('.sb-attack-damage').value),
+        raw: row.dataset.raw || null
+      };
+    }).filter(function (attack) {
+      return attack.name || attack.damage || attack.raw || attack.count !== null || attack.attackBonus !== null;
+    });
+  }
+
+  function renderStatblockAbilityRow(ability) {
+    const row = document.createElement('div');
+    row.className = 'statblock-ability-row';
+    row.innerHTML =
+      '<input class="tui-input sb-ability-name" type="text" placeholder="Nombre" value="' + escapeHtml(ability && ability.name ? ability.name : '') + '" />' +
+      '<input class="tui-input sb-ability-text" type="text" placeholder="Texto" value="' + escapeHtml(ability && ability.text ? ability.text : '') + '" />' +
+      '<button type="button" class="tui-button white-255 black-255-text sb-ability-remove" title="Eliminar habilidad">X</button>';
+    return row;
+  }
+
+  function renderStatblockAbilitiesList(abilities) {
+    const list = document.getElementById('sbReviewAbilitiesList');
+    if (!list) return;
+    list.innerHTML = '';
+    (abilities || []).forEach(function (ability) {
+      list.appendChild(renderStatblockAbilityRow(ability));
+    });
+  }
+
+  function readStatblockAbilitiesFromForm() {
+    return Array.from(document.querySelectorAll('#sbReviewAbilitiesList .statblock-ability-row')).map(function (row) {
+      return {
+        name: nullableText(row.querySelector('.sb-ability-name').value),
+        text: nullableText(row.querySelector('.sb-ability-text').value)
+      };
+    }).filter(function (ability) {
+      return ability.name || ability.text;
+    });
+  }
+
+  // Modelo vacío para "+ Nuevo" en el Codex: MISMO editor que la revisión
+  // de un statblock importado, solo que sin datos y sin texto original.
+  function createBlankStatblockModel(type) {
+    return {
+      id: NS.statblock.generateId(type, ''),
+      type: type,
+      name: null,
+      armorClass: { descending: null, ascending: null },
+      hitDice: { raw: null, formula: null },
+      hitPoints: null,
+      movement: null,
+      attacks: [],
+      thac0: null,
+      baseAttackBonus: null,
+      morale: { value: null, raw: null },
+      alignment: null,
+      xp: { value: null, raw: null },
+      numberAppearing: { dungeon: null, wilderness: null },
+      savingThrows: null,
+      treasure: null,
+      abilities: [],
+      notes: null,
+      source: { type: 'custom', originalStatblock: '' }
+    };
+  }
+
+  // options.allowBack: false oculta "Volver" (no aplica si no venimos de
+  // pegar un statblock, p.ej. Codex -> Nuevo/Editar). options.scope
+  // preselecciona el ámbito (Biblioteca/Campaña) en el que ya vive el
+  // registro al editar, o el destino por defecto al crear.
+  function openStatblockReviewFromModel(model, warnings, options) {
+    const opts = options || {};
+    pendingStatblockModel = model;
+    renderStatblockWarnings(warnings);
+
+    document.getElementById('sbReviewNameInput').value = model.name || '';
+    document.getElementById('sbReviewTypeInput').value = model.type === 'npc' ? 'npc' : 'monster';
+    document.getElementById('sbReviewHdInput').value = model.hitDice.raw || '';
+    document.getElementById('sbReviewHpInput').value = model.hitPoints === null ? '' : model.hitPoints;
+    document.getElementById('sbReviewAcDescInput').value = model.armorClass.descending === null ? '' : model.armorClass.descending;
+    document.getElementById('sbReviewAcAscInput').value = model.armorClass.ascending === null ? '' : model.armorClass.ascending;
+    document.getElementById('sbReviewMovementInput').value = model.movement || '';
+    document.getElementById('sbReviewThac0Input').value = model.thac0 || '';
+    document.getElementById('sbReviewAlignmentInput').value = model.alignment || '';
+    document.getElementById('sbReviewBaInput').value = model.baseAttackBonus === null ? '' : model.baseAttackBonus;
+    document.getElementById('sbReviewMoraleValueInput').value = model.morale.value === null ? '' : model.morale.value;
+    document.getElementById('sbReviewMoraleRawInput').value = model.morale.raw || '';
+    document.getElementById('sbReviewXpValueInput').value = model.xp.value === null ? '' : model.xp.value;
+    document.getElementById('sbReviewXpRawInput').value = model.xp.raw || '';
+    document.getElementById('sbReviewNaDungeonInput').value = model.numberAppearing.dungeon || '';
+    document.getElementById('sbReviewNaWildernessInput').value = model.numberAppearing.wilderness || '';
+    document.getElementById('sbReviewSavesInput').value = model.savingThrows || '';
+    document.getElementById('sbReviewTreasureInput').value = model.treasure || '';
+    document.getElementById('sbReviewNotesInput').value = model.notes || '';
+    document.getElementById('sbReviewOriginalText').value = model.source.originalStatblock || '';
+    renderStatblockAttacksList(model.attacks);
+    renderStatblockAbilitiesList(model.abilities);
+
+    const backBtn = document.getElementById('sbReviewBackBtn');
+    if (backBtn) backBtn.classList.toggle('hidden', opts.allowBack === false);
+
+    const originalField = document.getElementById('sbReviewOriginalField');
+    const hasOriginal = !!(model.source && model.source.originalStatblock);
+    if (originalField) originalField.classList.toggle('hidden', !hasOriginal);
+
+    const scope = opts.scope === 'library' ? 'library' : 'campaign';
+    document.getElementById('sbReviewScopeLibrary').checked = scope === 'library';
+    document.getElementById('sbReviewScopeCampaign').checked = scope === 'campaign';
+
+    closeModal('statblockImportModal');
+    openModal('statblockReviewModal');
+  }
+
+  function analyzeStatblock() {
+    const textInput = document.getElementById('statblockTextInput');
+    const typeInput = document.getElementById('statblockTypeInput');
+    const text = textInput ? textInput.value : '';
+    if (!text.trim()) return;
+    const result = NS.statblock.parse(text, typeInput ? typeInput.value : 'auto');
+    openStatblockReviewFromModel(result.model, result.warnings, { allowBack: true, scope: 'campaign' });
+  }
+
+  // Si el usuario corrige el valor numérico pero no toca el detalle, el
+  // detalle se realinea con el valor (evita dejar un "raw" desfasado tipo
+  // "7 (9 with king)" cuando ya no aplica). Si el detalle se edita a mano,
+  // se respeta tal cual.
+  function valueWithRawFromInputs(valueInput, rawInput) {
+    const value = nullableNumber(valueInput.value);
+    const rawText = nullableText(rawInput.value);
+    return { value: value, raw: rawText || (value === null ? null : String(value)) };
+  }
+
+  function saveStatblockReview() {
+    if (!pendingStatblockModel) return;
+    const type = document.getElementById('sbReviewTypeInput').value === 'npc' ? 'npc' : 'monster';
+    const model = {
+      id: pendingStatblockModel.id,
+      type: type,
+      name: nullableText(document.getElementById('sbReviewNameInput').value),
+      armorClass: {
+        descending: nullableNumber(document.getElementById('sbReviewAcDescInput').value),
+        ascending: nullableNumber(document.getElementById('sbReviewAcAscInput').value)
+      },
+      hitDice: {
+        raw: nullableText(document.getElementById('sbReviewHdInput').value),
+        formula: pendingStatblockModel.hitDice.formula
+      },
+      hitPoints: nullableNumber(document.getElementById('sbReviewHpInput').value),
+      movement: nullableText(document.getElementById('sbReviewMovementInput').value),
+      attacks: readStatblockAttacksFromForm(),
+      thac0: nullableText(document.getElementById('sbReviewThac0Input').value),
+      baseAttackBonus: nullableNumber(document.getElementById('sbReviewBaInput').value),
+      morale: valueWithRawFromInputs(document.getElementById('sbReviewMoraleValueInput'), document.getElementById('sbReviewMoraleRawInput')),
+      alignment: nullableText(document.getElementById('sbReviewAlignmentInput').value),
+      xp: valueWithRawFromInputs(document.getElementById('sbReviewXpValueInput'), document.getElementById('sbReviewXpRawInput')),
+      numberAppearing: {
+        dungeon: nullableText(document.getElementById('sbReviewNaDungeonInput').value),
+        wilderness: nullableText(document.getElementById('sbReviewNaWildernessInput').value)
+      },
+      savingThrows: nullableText(document.getElementById('sbReviewSavesInput').value),
+      treasure: nullableText(document.getElementById('sbReviewTreasureInput').value),
+      abilities: readStatblockAbilitiesFromForm(),
+      notes: nullableText(document.getElementById('sbReviewNotesInput').value),
+      source: pendingStatblockModel.source
+    };
+
+    const scopeInput = document.querySelector('input[name="sbReviewScope"]:checked');
+    const scope = scopeInput && scopeInput.value === 'library' ? 'library' : 'campaign';
+    NS.repository.saveActor(state, type, model, scope);
+    NS.addLog(state, 'Contenido personalizado guardado: ' + (model.name || model.id) + '.');
+
+    pendingStatblockModel = null;
+    closeModal('statblockReviewModal');
+    render();
+    refreshCodexIfOpen();
+  }
+
+  // --- Codex MVP ----------------------------------------------------
+  // Biblioteca (js/repository.js) para consultar/gestionar Monstruos,
+  // PNJ y Encuentros. La UI nunca toca localStorage/state directamente:
+  // todo pasa por NS.repository. Crear/editar Monstruos y PNJ reutiliza
+  // el MISMO popup de revisión del Statblock Importer (openStatblock-
+  // ReviewFromModel/saveStatblockReview), nunca un segundo editor.
+  let codexActiveTab = 'monster';
+  let codexSelectedId = null;
+  let pendingCodexDelete = null; // { kind: 'monster'|'npc'|'encounter', id }
+  let codexEncounterEditingId = null; // null = crear nuevo encuentro
+
+  function getCodexFilteredItems() {
+    const scopeFilterEl = document.getElementById('codexScopeFilter');
+    const scopeFilter = scopeFilterEl ? scopeFilterEl.value : 'all';
+    const searchInput = document.getElementById('codexSearchInput');
+    const query = searchInput ? searchInput.value : '';
+
+    let items = codexActiveTab === 'encounter'
+      ? NS.repository.listEncounters(state)
+      : NS.repository.listActors(state, codexActiveTab);
+
+    if (scopeFilter !== 'all') {
+      items = items.filter(function (item) { return item.scope === scopeFilter; });
+    }
+    return NS.ui.filterBySearch(items, query, function (item) { return item.name || ''; });
+  }
+
+  function formatActorSourceLabel(item) {
+    return (item.source && item.source.type === 'custom') ? 'Personalizado' : '—';
+  }
+
+  function formatScopeLabel(scope) {
+    return scope === 'library' ? 'Biblioteca' : 'Campaña';
+  }
+
+  function formatEncounterComposition(encounter) {
+    const groups = Array.isArray(encounter.groups) ? encounter.groups : [];
+    if (!groups.length) return 'Sin criaturas';
+    return groups.map(function (group) {
+      const actor = NS.repository.getActorById(state, group.actorId);
+      const name = actor ? (actor.name || 'Sin nombre') : '[Contenido no disponible]';
+      return (group.quantity || '?') + ' × ' + name;
+    }).join(', ');
+  }
+
+  function renderCodexList() {
+    const list = document.getElementById('codexList');
+    if (!list) return;
+    list.className = 'codex-list' + (codexActiveTab === 'encounter' ? ' codex-list--encounters' : '');
+
+    const items = getCodexFilteredItems();
+    const countEl = document.getElementById('codexResultCount');
+    if (countEl) countEl.textContent = NS.ui.formatResultCount(items.length);
+
+    if (!items.some(function (item) { return item.id === codexSelectedId; })) {
+      codexSelectedId = null;
+    }
+    const editBtn = document.getElementById('codexEditBtn');
+    const deleteBtn = document.getElementById('codexDeleteBtn');
+    if (editBtn) editBtn.disabled = !codexSelectedId;
+    if (deleteBtn) deleteBtn.disabled = !codexSelectedId;
+
+    const importBtn = document.getElementById('codexImportBtn');
+    if (importBtn) importBtn.classList.toggle('hidden', codexActiveTab === 'encounter');
+
+    list.innerHTML = '';
+    if (!items.length) {
+      const empty = document.createElement('div');
+      empty.className = 'tui-empty-state';
+      empty.textContent = codexActiveTab === 'monster' ? 'No hay monstruos disponibles.'
+        : codexActiveTab === 'npc' ? 'No hay PNJ disponibles.'
+        : 'No hay encuentros disponibles.';
+      list.appendChild(empty);
+      return;
+    }
+
+    const header = document.createElement('div');
+    header.className = 'codex-row codex-row-header';
+    header.innerHTML = codexActiveTab === 'encounter'
+      ? '<span>Nombre</span><span>Composición</span><span>Ámbito</span>'
+      : '<span>Nombre</span><span>DG</span><span>CA</span><span>Fuente</span><span>Ámbito</span>';
+    list.appendChild(header);
+
+    items.forEach(function (item) {
+      const row = document.createElement('div');
+      row.className = 'codex-row' + (item.id === codexSelectedId ? ' selected' : '');
+      row.dataset.codexId = item.id;
+      row.title = 'Ver detalle';
+      if (codexActiveTab === 'encounter') {
+        const composition = formatEncounterComposition(item);
+        row.innerHTML =
+          '<span class="codex-col-name" title="' + escapeHtml(item.name || '') + '">' + escapeHtml(item.name || 'Sin nombre') + '</span>' +
+          '<span class="codex-col-composition" title="' + escapeHtml(composition) + '">' + escapeHtml(composition) + '</span>' +
+          '<span title="' + escapeHtml(formatScopeLabel(item.scope)) + '">' + formatScopeLabel(item.scope) + '</span>';
+      } else {
+        const hd = item.hitDice && item.hitDice.raw ? item.hitDice.raw : '—';
+        const ac = item.armorClass && item.armorClass.descending !== null && item.armorClass.descending !== undefined ? item.armorClass.descending : '—';
+        const sourceLabel = formatActorSourceLabel(item);
+        row.innerHTML =
+          '<span class="codex-col-name" title="' + escapeHtml(item.name || '') + '">' + escapeHtml(item.name || 'Sin nombre') + '</span>' +
+          '<span>' + escapeHtml(String(hd)) + '</span>' +
+          '<span>' + escapeHtml(String(ac)) + '</span>' +
+          '<span title="' + escapeHtml(sourceLabel) + '">' + escapeHtml(sourceLabel) + '</span>' +
+          '<span title="' + escapeHtml(formatScopeLabel(item.scope)) + '">' + formatScopeLabel(item.scope) + '</span>';
+      }
+      list.appendChild(row);
+    });
+  }
+
+  function setCodexTab(tab) {
+    codexActiveTab = tab;
+    codexSelectedId = null;
+    const searchInput = document.getElementById('codexSearchInput');
+    if (searchInput) searchInput.value = '';
+    document.querySelectorAll('.codex-tab-btn').forEach(function (btn) {
+      btn.classList.toggle('active', btn.dataset.codexTab === tab);
+    });
+    renderCodexList();
+  }
+
+  function openCodexModal() {
+    setCodexTab('monster');
+    const scopeFilterEl = document.getElementById('codexScopeFilter');
+    if (scopeFilterEl) scopeFilterEl.value = 'all';
+    renderCodexList();
+    openModal('codexModal');
+  }
+
+  // Reabre el listado si el popup del Codex sigue abierto detrás de otro
+  // (statblock review, confirmación...): así lo guardado/eliminado
+  // aparece "inmediatamente en el Codex" sin tener que cerrarlo y
+  // reabrirlo a mano.
+  function refreshCodexIfOpen() {
+    const modal = document.getElementById('codexModal');
+    if (modal && modal.classList.contains('active')) renderCodexList();
+  }
+
+  function openCodexDetailForSelected() {
+    if (!codexSelectedId) return;
+    if (codexActiveTab === 'encounter') {
+      openCodexEncounterDetail(codexSelectedId);
+    } else {
+      openCodexActorDetail(codexSelectedId);
+    }
+  }
+
+  // --- Ficha de Monstruo/PNJ (solo lectura) ---------------------------
+
+  function formatFieldRow(label, value) {
+    if (value === null || value === undefined || value === '') return '';
+    return '<div class="duration-row"><span class="encounter-field-label">' + escapeHtml(label) + '</span><span>' + escapeHtml(String(value)) + '</span></div>';
+  }
+
+  function renderActorDetailBody(actor) {
+    const rows = [];
+    rows.push('<div class="effect-detail-name">' + escapeHtml(actor.name || 'Sin nombre') + '</div>');
+    rows.push('<div class="day-period">' + escapeHtml(formatActorSourceLabel(actor)) + ' - ' + escapeHtml(formatScopeLabel(actor.scope)) + '</div>');
+
+    const stats = [];
+    if (actor.hitDice && actor.hitDice.raw) stats.push(formatFieldRow('DG', actor.hitDice.raw));
+    if (actor.hitPoints !== null && actor.hitPoints !== undefined) stats.push(formatFieldRow('PG', actor.hitPoints));
+    if (actor.armorClass && (actor.armorClass.descending !== null && actor.armorClass.descending !== undefined)) {
+      const ac = actor.armorClass.ascending !== null && actor.armorClass.ascending !== undefined
+        ? actor.armorClass.descending + ' [' + actor.armorClass.ascending + ']'
+        : String(actor.armorClass.descending);
+      stats.push(formatFieldRow('CA', ac));
+    }
+    if (actor.movement) stats.push(formatFieldRow('MV', actor.movement));
+    if (actor.thac0) stats.push(formatFieldRow('THAC0', actor.thac0));
+    if (actor.baseAttackBonus !== null && actor.baseAttackBonus !== undefined) stats.push(formatFieldRow('BA', (actor.baseAttackBonus >= 0 ? '+' : '') + actor.baseAttackBonus));
+    if (actor.morale && actor.morale.raw) stats.push(formatFieldRow('Moral', actor.morale.raw));
+    if (actor.alignment) stats.push(formatFieldRow('AL', actor.alignment));
+    if (actor.xp && actor.xp.raw) stats.push(formatFieldRow('PX', actor.xp.raw));
+    if (actor.savingThrows) stats.push(formatFieldRow('Salvaciones', actor.savingThrows));
+    if (actor.treasure) stats.push(formatFieldRow('Tesoro', actor.treasure));
+    if (stats.length) rows.push('<div class="effect-detail-section">' + stats.join('') + '</div>');
+
+    if (actor.numberAppearing && (actor.numberAppearing.dungeon || actor.numberAppearing.wilderness)) {
+      const naRows = [];
+      if (actor.numberAppearing.dungeon) naRows.push(formatFieldRow('Mazmorra', actor.numberAppearing.dungeon));
+      if (actor.numberAppearing.wilderness) naRows.push(formatFieldRow('Exterior', actor.numberAppearing.wilderness));
+      rows.push('<div class="effect-detail-section"><div class="encounter-header">Aparición</div>' + naRows.join('') + '</div>');
+    }
+
+    if (Array.isArray(actor.attacks) && actor.attacks.length) {
+      const atkRows = actor.attacks.map(function (attack) {
+        const label = attack.name || attack.raw || 'Ataque';
+        const detail = attack.damage || attack.raw || '';
+        return '<div class="list-item">' + escapeHtml(label) + (detail ? ' - ' + escapeHtml(detail) : '') + '</div>';
+      }).join('');
+      rows.push('<div class="effect-detail-section"><div class="encounter-header">Ataques</div>' + atkRows + '</div>');
+    }
+
+    if (Array.isArray(actor.abilities) && actor.abilities.length) {
+      const abilityRows = actor.abilities.map(function (ability) {
+        return '<div class="list-item"><strong>' + escapeHtml(ability.name || '') + '</strong>' + (ability.text ? ': ' + escapeHtml(ability.text) : '') + '</div>';
+      }).join('');
+      rows.push('<div class="effect-detail-section"><div class="encounter-header">Habilidades</div>' + abilityRows + '</div>');
+    }
+
+    if (actor.notes) {
+      rows.push('<div class="effect-detail-section"><div class="encounter-header">Notas</div><div>' + escapeHtml(actor.notes) + '</div></div>');
+    }
+
+    rows.push(
+      '<div class="modal-actions">' +
+        '<button type="button" id="codexActorDetailEditBtn" class="tui-button white-255 black-255-text">Editar</button>' +
+        '<button type="button" id="codexActorDetailDeleteBtn" class="tui-button white-255 black-255-text">Eliminar</button>' +
+        '<button type="button" class="tui-button white-255 black-255-text btn-primary" data-close-modal>Cerrar</button>' +
+      '</div>'
+    );
+
+    return rows.join('');
+  }
+
+  function openCodexActorDetail(id) {
+    const actor = NS.repository.getActorById(state, id);
+    if (!actor) return;
+    document.getElementById('codexActorDetailBody').innerHTML = renderActorDetailBody(actor);
+    openModal('codexActorDetailModal');
+  }
+
+  function openCodexNew() {
+    if (codexActiveTab === 'encounter') {
+      openCodexEncounterNew();
+      return;
+    }
+    const scopeFilterEl = document.getElementById('codexScopeFilter');
+    const defaultScope = scopeFilterEl && scopeFilterEl.value === 'library' ? 'library' : 'campaign';
+    openStatblockReviewFromModel(createBlankStatblockModel(codexActiveTab), [], { allowBack: false, scope: defaultScope });
+  }
+
+  function openCodexEdit() {
+    if (!codexSelectedId) return;
+    if (codexActiveTab === 'encounter') {
+      const encounter = NS.repository.getEncounterById(state, codexSelectedId);
+      if (encounter) openCodexEncounterEdit(encounter);
+      return;
+    }
+    const actor = NS.repository.getActorById(state, codexSelectedId);
+    if (!actor) return;
+    closeModal('codexActorDetailModal');
+    openStatblockReviewFromModel(actor, [], { allowBack: false, scope: actor.scope });
+  }
+
+  function requestCodexDelete(kind, id) {
+    const record = kind === 'encounter' ? NS.repository.getEncounterById(state, id) : NS.repository.getActorById(state, id);
+    if (!record) return;
+    pendingCodexDelete = { kind: kind, id: id };
+    document.getElementById('codexDeleteConfirmBody').textContent = '¿Eliminar "' + (record.name || record.id) + '"?';
+    closeModal('codexActorDetailModal');
+    closeModal('codexEncounterDetailModal');
+    openModal('codexDeleteConfirmModal');
+  }
+
+  function performCodexDelete() {
+    if (!pendingCodexDelete) return;
+    const name = (pendingCodexDelete.kind === 'encounter'
+      ? NS.repository.getEncounterById(state, pendingCodexDelete.id)
+      : NS.repository.getActorById(state, pendingCodexDelete.id));
+    const label = name ? (name.name || name.id) : pendingCodexDelete.id;
+    if (pendingCodexDelete.kind === 'encounter') {
+      NS.repository.deleteEncounter(state, pendingCodexDelete.id);
+    } else {
+      NS.repository.deleteActor(state, pendingCodexDelete.kind, pendingCodexDelete.id);
+    }
+    NS.addLog(state, 'Contenido personalizado eliminado: ' + label + '.');
+    pendingCodexDelete = null;
+    codexSelectedId = null;
+    closeModal('codexDeleteConfirmModal');
+    renderCodexList();
+  }
+
+  // --- Encuentros ------------------------------------------------------
+
+  function renderCodexEncounterCreatureRow(group) {
+    const actor = group && group.actorId ? NS.repository.getActorById(state, group.actorId) : null;
+    const name = group ? (actor ? (actor.name || 'Sin nombre') : '[Contenido no disponible]') : '';
+    const row = document.createElement('div');
+    row.className = 'statblock-attack-row codex-creature-row';
+    row.dataset.actorId = group && group.actorId ? group.actorId : '';
+    row.innerHTML =
+      '<span class="codex-creature-name">' + escapeHtml(name) + '</span>' +
+      '<input class="tui-input codex-creature-quantity" type="text" placeholder="1d4" value="' + escapeHtml(group && group.quantity ? group.quantity : '1') + '" />' +
+      '<button type="button" class="tui-button white-255 black-255-text sb-attack-remove" title="Quitar criatura">X</button>';
+    return row;
+  }
+
+  function renderCodexEncounterCreaturesList(groups) {
+    const list = document.getElementById('codexEncounterCreaturesList');
+    if (!list) return;
+    list.innerHTML = '';
+    (groups || []).forEach(function (group) {
+      list.appendChild(renderCodexEncounterCreatureRow(group));
+    });
+  }
+
+  function readCodexEncounterGroupsFromForm() {
+    return Array.from(document.querySelectorAll('#codexEncounterCreaturesList .codex-creature-row'))
+      .map(function (row) {
+        return {
+          actorId: row.dataset.actorId || null,
+          quantity: nullableText(row.querySelector('.codex-creature-quantity').value) || '1'
+        };
+      })
+      .filter(function (group) { return group.actorId; });
+  }
+
+  function openCodexEncounterNew() {
+    codexEncounterEditingId = null;
+    document.getElementById('codexEncounterEditLegend').textContent = 'Nuevo encuentro';
+    document.getElementById('codexEncounterNameInput').value = '';
+    document.getElementById('codexEncounterNotesInput').value = '';
+    const scopeFilterEl = document.getElementById('codexScopeFilter');
+    const defaultScope = scopeFilterEl && scopeFilterEl.value === 'library' ? 'library' : 'campaign';
+    document.getElementById('codexEncounterScopeLibrary').checked = defaultScope === 'library';
+    document.getElementById('codexEncounterScopeCampaign').checked = defaultScope !== 'library';
+    renderCodexEncounterCreaturesList([]);
+    openModal('codexEncounterEditModal');
+  }
+
+  function openCodexEncounterEdit(encounter) {
+    codexEncounterEditingId = encounter.id;
+    document.getElementById('codexEncounterEditLegend').textContent = 'Editar encuentro: ' + (encounter.name || '');
+    document.getElementById('codexEncounterNameInput').value = encounter.name || '';
+    document.getElementById('codexEncounterNotesInput').value = encounter.notes || '';
+    document.getElementById('codexEncounterScopeLibrary').checked = encounter.scope === 'library';
+    document.getElementById('codexEncounterScopeCampaign').checked = encounter.scope !== 'library';
+    renderCodexEncounterCreaturesList(encounter.groups);
+    closeModal('codexEncounterDetailModal');
+    openModal('codexEncounterEditModal');
+  }
+
+  function saveCodexEncounter() {
+    const name = nullableText(document.getElementById('codexEncounterNameInput').value);
+    const groups = readCodexEncounterGroupsFromForm();
+    const notes = nullableText(document.getElementById('codexEncounterNotesInput').value);
+    const scopeInput = document.querySelector('input[name="codexEncounterScope"]:checked');
+    const scope = scopeInput && scopeInput.value === 'library' ? 'library' : 'campaign';
+
+    const model = {
+      id: codexEncounterEditingId || ('encounter:custom:' + NS.statblock.slugify(name) + '-' + Date.now()),
+      type: 'encounter',
+      name: name,
+      rulesetId: state.campaign.rulesetId || 'generic',
+      groups: groups,
+      notes: notes,
+      scope: scope
+    };
+
+    NS.repository.saveEncounter(state, model, scope);
+    NS.addLog(state, 'Encuentro guardado: ' + (name || model.id) + '.');
+
+    codexEncounterEditingId = null;
+    closeModal('codexEncounterEditModal');
+    render();
+    refreshCodexIfOpen();
+  }
+
+  function openCodexEncounterDetail(id) {
+    const encounter = NS.repository.getEncounterById(state, id);
+    if (!encounter) return;
+    const groups = Array.isArray(encounter.groups) ? encounter.groups : [];
+    const groupLines = groups.map(function (group) {
+      const actor = NS.repository.getActorById(state, group.actorId);
+      const name = actor ? (actor.name || 'Sin nombre') : '[Contenido no disponible]';
+      return '<div class="list-item">' + escapeHtml(group.quantity || '?') + ' × ' + escapeHtml(name) + '</div>';
+    }).join('');
+
+    const body = document.getElementById('codexEncounterDetailBody');
+    body.innerHTML =
+      '<div class="effect-detail-name">' + escapeHtml(encounter.name || 'Sin nombre') + '</div>' +
+      '<div class="day-period">' + formatScopeLabel(encounter.scope) + '</div>' +
+      '<div class="effect-detail-section">' + (groupLines || '<div class="tui-empty-state">Sin criaturas.</div>') + '</div>' +
+      (encounter.notes ? '<div class="effect-detail-section"><div class="encounter-header">Notas</div><div>' + escapeHtml(encounter.notes) + '</div></div>' : '') +
+      '<div class="modal-actions">' +
+        '<button type="button" id="codexEncounterDetailEditBtn" class="tui-button white-255 black-255-text">Editar</button>' +
+        '<button type="button" id="codexEncounterDetailDeleteBtn" class="tui-button white-255 black-255-text">Eliminar</button>' +
+        '<button type="button" class="tui-button white-255 black-255-text btn-primary" data-close-modal>Cerrar</button>' +
+      '</div>';
+    openModal('codexEncounterDetailModal');
+  }
+
+  // --- Buscador de criaturas para el editor de encuentros --------------
+
+  function renderCodexCreatureSearchResults(query) {
+    const results = document.getElementById('codexCreatureSearchResults');
+    if (!results) return;
+    const monsters = NS.repository.listActors(state, 'monster');
+    const npcs = NS.repository.listActors(state, 'npc');
+    const all = monsters.concat(npcs);
+    const filtered = NS.ui.filterBySearch(all, query, function (item) { return item.name || ''; });
+
+    results.innerHTML = '';
+    if (!filtered.length) {
+      const empty = document.createElement('div');
+      empty.className = 'tui-empty-state';
+      empty.textContent = 'Sin resultados.';
+      results.appendChild(empty);
+      return;
+    }
+    filtered.forEach(function (item) {
+      const row = document.createElement('div');
+      row.className = 'list-item codex-creature-pick-row';
+      row.dataset.actorId = item.id;
+      row.title = 'Añadir al encuentro';
+      row.textContent = (item.name || 'Sin nombre') + ' (' + formatScopeLabel(item.scope) + ')';
+      results.appendChild(row);
+    });
+  }
+
+  function openCodexCreatureSearch() {
+    const input = document.getElementById('codexCreatureSearchInput');
+    if (input) input.value = '';
+    renderCodexCreatureSearchResults('');
+    openModal('codexCreatureSearchModal');
   }
 
   // "No mostrar al iniciar" es una preferencia de la app (localStorage
@@ -762,23 +1510,71 @@
     openModal('logModal');
   }
 
-  function openExplorationActionsModal() {
-    const list = document.getElementById('explorationActionsList');
+  // Acciones de jugador (Buscar/Escuchar/Forzar/Descansar) al
+  // mismo nivel que las de DJ (Avanzar/Encuentro), agrupadas
+  // en su propio bloque dentro del panel Acciones — ya no viven detrás de
+  // un popup aparte. La lista en sí sigue viniendo de Ruleset Core
+  // (state.dungeon.rules.explorationActions), nada hardcodeado aquí.
+  function renderDungeonPlayerActions() {
+    const list = document.getElementById('dungeonPlayerActions');
+    if (!list) return;
     list.innerHTML = '';
     const actions = state.dungeon.rules.explorationActions || [];
-    if (!actions.length) {
-      list.innerHTML = '<div class="empty-row">Sin acciones configuradas.</div>';
-    } else {
-      actions.forEach(function (action) {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'tui-button white-255 black-255-text';
-        btn.dataset.actionId = action.id;
-        btn.textContent = action.label + (action.consumesTurn ? '' : ' (rápido)');
-        list.appendChild(btn);
-      });
-    }
-    openModal('explorationActionsModal');
+    actions.forEach(function (action) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'tui-button white-255 black-255-text';
+      btn.dataset.actionId = action.id;
+      btn.textContent = action.label + (action.consumesTurn ? '' : ' (r)');
+      if (!action.consumesTurn) btn.title = action.label + ' (rápido: no consume turno)';
+      list.appendChild(btn);
+    });
+    // Descansar reutiliza el procedimiento central existente (NS.dungeon.rest,
+    // el mismo que Herramientas -> Descanso corto): dura varios turnos y
+    // reinicia el ciclo, así que no pasa por el performAction genérico de
+    // arriba (pensado para acciones de 0-1 turno).
+    const restBtn = document.createElement('button');
+    restBtn.type = 'button';
+    restBtn.className = 'tui-button white-255 black-255-text';
+    restBtn.dataset.actionId = 'rest';
+    restBtn.textContent = 'Descansar';
+    list.appendChild(restBtn);
+  }
+
+  // Ubicación actual: ayuda textual, no un mapa. Solo campos disponibles.
+  function renderDungeonLocation() {
+    const box = document.getElementById('dungeonLocationSummary');
+    if (!box) return;
+    const location = state.dungeon.location || {};
+    const lines = [];
+    if (location.name) lines.push('<strong>' + escapeHtml(location.name) + '</strong>');
+    if (location.level) lines.push('Nivel: ' + escapeHtml(location.level));
+    if (location.reference) lines.push('Ref: ' + escapeHtml(location.reference));
+    if (location.notes) lines.push('Notas: ' + escapeHtml(location.notes));
+    box.innerHTML = lines.length ? lines.join('<br>') : 'Sin ubicación registrada.';
+  }
+
+  function openLocationModal() {
+    const location = state.dungeon.location || {};
+    document.getElementById('locationNameInput').value = location.name || '';
+    document.getElementById('locationLevelInput').value = location.level || '';
+    document.getElementById('locationReferenceInput').value = location.reference || '';
+    document.getElementById('locationNotesInput').value = location.notes || '';
+    openModal('locationModal');
+  }
+
+  function saveLocation() {
+    const location = {
+      name: document.getElementById('locationNameInput').value.trim(),
+      level: document.getElementById('locationLevelInput').value.trim(),
+      reference: document.getElementById('locationReferenceInput').value.trim(),
+      notes: document.getElementById('locationNotesInput').value.trim()
+    };
+    state.dungeon.location = location;
+    const logParts = [location.name, location.reference].filter(Boolean);
+    NS.addLog(state, 'Ubicación: ' + (logParts.length ? logParts.join(' - ') : 'actualizada') + '.');
+    closeModal('locationModal');
+    render();
   }
 
   function openCombatDamageModal() {
@@ -860,9 +1656,9 @@
       '<strong>' + escapeHtml(ruleset.name) + '</strong><br>' +
       'Familia: ' + escapeHtml(NS.rules.familyLabel(ruleset.family)) + '<br>' +
       'CA: ' + armorClassModeLabel(ruleset.combat.armorClass.mode) + '<br>' +
-      'Iniciativa: ' + initiativeTypeLabel(ruleset.combat.initiative.type) + ' · ' + escapeHtml(ruleset.combat.initiative.dice) + '<br>' +
-      'Mazmorra: ' + ruleset.dungeon.turnDurationMinutes + ' min/turno · encuentro cada ' + ruleset.dungeon.encounter.intervalTurns + ' turnos<br>' +
-      'Moral: ' + (ruleset.combat.morale.enabled ? 'Sí' : 'No') + ' · Reacción: ' + (ruleset.combat.reaction.enabled ? 'Sí' : 'No');
+      'Iniciativa: ' + initiativeTypeLabel(ruleset.combat.initiative.type) + ' - ' + escapeHtml(ruleset.combat.initiative.dice) + '<br>' +
+      'Mazmorra: ' + ruleset.dungeon.turnDurationMinutes + ' min/turno - encuentro cada ' + ruleset.dungeon.encounter.intervalTurns + ' turnos<br>' +
+      'Moral: ' + (ruleset.combat.morale.enabled ? 'Sí' : 'No') + ' - Reacción: ' + (ruleset.combat.reaction.enabled ? 'Sí' : 'No');
   }
 
   function openRulesModal() {
@@ -886,7 +1682,7 @@
       'Descanso: cada ' + ruleset.dungeon.rest.intervalTurns + ' turnos',
       '',
       '<strong>COMBATE</strong>',
-      'Iniciativa: ' + initiativeTypeLabel(ruleset.combat.initiative.type) + ' · ' + escapeHtml(ruleset.combat.initiative.dice),
+      'Iniciativa: ' + initiativeTypeLabel(ruleset.combat.initiative.type) + ' - ' + escapeHtml(ruleset.combat.initiative.dice),
       'CA: ' + armorClassModeLabel(ruleset.combat.armorClass.mode),
       'Moral: ' + (ruleset.combat.morale.enabled ? 'Sí (' + escapeHtml(ruleset.combat.morale.dice) + ')' : 'No'),
       'Reacción: ' + (ruleset.combat.reaction.enabled ? 'Sí (' + escapeHtml(ruleset.combat.reaction.dice) + ')' : 'No'),
@@ -1091,7 +1887,7 @@
     } else if (action === 'addLight') {
       openModal('lightModal');
     } else if (action === 'addEffect') {
-      openModal('effectModal');
+      openAddEffectModal();
     } else if (action === 'rest') {
       NS.dungeon.rest(state);
     } else if (action === 'dice') {
@@ -1102,6 +1898,12 @@
       openRulesModal();
     } else if (action === 'xpCalculator') {
       openXpCalculatorModal();
+    } else if (action === 'settings') {
+      openSettingsModal();
+    } else if (action === 'importStatblock') {
+      openStatblockImportModal();
+    } else if (action === 'codex') {
+      openCodexModal();
     } else if (action === 'help') {
       openModal('helpModal');
     } else if (action === 'shortcuts') {
@@ -1123,6 +1925,7 @@
     updateLastSavedIndicator();
     renderParty();
     renderTime();
+    reconcileEffectTargets();
     renderDungeonSummary();
     renderWilderness();
     renderCombat();
@@ -1183,29 +1986,200 @@
     render();
   }
 
-  function addEffectFromForm() {
+  // --- Efectos: crear/editar/detalle/eliminar --------------------------
+  // editingEffectId !== null -> el popup effectModal está en modo edición
+  // (mismo formulario reutilizado, ver openEditEffectModal). null -> modo
+  // creación (openAddEffectModal).
+  let editingEffectId = null;
+  let detailEffectId = null;
+  let pendingDeleteEffectId = null;
+
+  function renderEffectTargetCheckboxes(selectedIds) {
+    const list = document.getElementById('effectTargetsList');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!state.party.length) {
+      const empty = document.createElement('div');
+      empty.className = 'tui-empty-state';
+      empty.textContent = 'No hay personajes en el grupo.';
+      list.appendChild(empty);
+      return;
+    }
+    state.party.forEach(function (member) {
+      const label = document.createElement('label');
+      label.className = 'tui-checkbox effect-target-checkbox';
+      // Texto suelto, NO un <span>: el CSS vendor de TuiCss usa un selector
+      // genérico ".tui-checkbox span" para el glifo [x]/[ ] (position:
+      // absolute, 10x10px). Un <span> aquí para el nombre heredaría esas
+      // reglas y se superpondría con el glifo (mismo patrón que ya usa el
+      // checkbox "No mostrar al iniciar" de Acerca de: texto suelto).
+      label.appendChild(document.createTextNode(member.name));
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.className = 'effect-target-input';
+      input.value = member.id;
+      input.checked = selectedIds.indexOf(member.id) !== -1;
+      const box = document.createElement('span');
+      label.appendChild(input);
+      label.appendChild(box);
+      list.appendChild(label);
+    });
+  }
+
+  function getSelectedEffectTargetIds() {
+    return Array.from(document.querySelectorAll('#effectTargetsList .effect-target-input:checked')).map(function (input) {
+      return input.value;
+    });
+  }
+
+  function resetEffectForm() {
+    document.getElementById('effectNameInput').value = '';
+    document.getElementById('effectDurationInput').value = '3';
+    document.getElementById('effectUnitInput').value = 'turnos';
+    document.getElementById('effectRemainingInput').value = '1';
+    document.getElementById('effectTargetsError').classList.add('hidden');
+  }
+
+  function openAddEffectModal() {
+    editingEffectId = null;
+    resetEffectForm();
+    document.getElementById('effectModalLegend').textContent = 'Añadir efecto';
+    document.getElementById('effectConfirmBtn').textContent = 'Añadir';
+    document.getElementById('effectRemainingField').classList.add('hidden');
+    renderEffectTargetCheckboxes([]);
+    openModal('effectModal');
+  }
+
+  function openEditEffectModal(effectId) {
+    const effect = state.dungeon.effects.find(function (item) { return item.id === effectId; });
+    if (!effect) return;
+    editingEffectId = effectId;
+    document.getElementById('effectTargetsError').classList.add('hidden');
+    document.getElementById('effectModalLegend').textContent = 'Editar efecto: ' + effect.name;
+    document.getElementById('effectConfirmBtn').textContent = 'Guardar cambios';
+    document.getElementById('effectNameInput').value = effect.name;
+    document.getElementById('effectDurationInput').value = Number(effect.initialDuration) || 1;
+    document.getElementById('effectUnitInput').value = effect.unit || 'turnos';
+    document.getElementById('effectRemainingInput').value = Math.max(0, Number(effect.duration) || 0);
+    document.getElementById('effectRemainingField').classList.remove('hidden');
+    renderEffectTargetCheckboxes(Array.isArray(effect.targetIds) ? effect.targetIds : []);
+    closeModal('effectDetailModal');
+    openModal('effectModal');
+  }
+
+  function saveEffectFromForm() {
     const nameInput = document.getElementById('effectNameInput');
-    const characterInput = document.getElementById('effectCharacterInput');
     const durationInput = document.getElementById('effectDurationInput');
     const unitInput = document.getElementById('effectUnitInput');
+    const remainingInput = document.getElementById('effectRemainingInput');
     const name = nameInput.value.trim();
     if (!name) return;
-    const duration = Math.max(1, Number(durationInput.value) || 1);
-    const newEffect = {
-      id: 'effect-' + Date.now(),
-      name: name,
-      character: characterInput.value.trim() || 'Grupo',
-      duration: duration,
-      initialDuration: duration,
-      unit: unitInput.value || 'turnos',
-      active: true
-    };
-    state.dungeon.effects.push(newEffect);
-    NS.addLog(state, 'Se aplica ' + newEffect.name + ' a ' + newEffect.character + '.');
-    nameInput.value = '';
-    characterInput.value = '';
-    durationInput.value = '3';
+
+    const targetIds = getSelectedEffectTargetIds();
+    if (!targetIds.length) {
+      document.getElementById('effectTargetsError').classList.remove('hidden');
+      return;
+    }
+
+    const maxDuration = Math.max(1, Number(durationInput.value) || 1);
+    const unit = unitInput.value || 'turnos';
+
+    if (editingEffectId) {
+      const effect = state.dungeon.effects.find(function (item) { return item.id === editingEffectId; });
+      if (!effect) { editingEffectId = null; closeModal('effectModal'); return; }
+      effect.name = name;
+      effect.targetIds = targetIds;
+      effect.initialDuration = maxDuration;
+      effect.duration = Math.max(0, Math.min(maxDuration, Number(remainingInput.value) || 0));
+      effect.unit = unit;
+      if (effect.duration <= 0) {
+        effect.active = false;
+        NS.addLog(state, 'Finaliza ' + effect.name + ' sobre ' + NS.dungeon.effectTargetsLabel(state, effect) + '.');
+      } else {
+        NS.addLog(state, 'Se edita ' + effect.name + '.');
+      }
+      editingEffectId = null;
+    } else {
+      const newEffect = {
+        id: 'effect-' + Date.now(),
+        name: name,
+        targetIds: targetIds,
+        duration: maxDuration,
+        initialDuration: maxDuration,
+        unit: unit,
+        active: true
+      };
+      state.dungeon.effects.push(newEffect);
+      NS.addLog(state, 'Se aplica ' + newEffect.name + ' a ' + NS.dungeon.effectTargetsLabel(state, newEffect) + '.');
+    }
+
+    resetEffectForm();
     closeModal('effectModal');
+    render();
+  }
+
+  function openEffectDetail(effectId) {
+    const effect = state.dungeon.effects.find(function (item) { return item.id === effectId; });
+    if (!effect) return;
+    detailEffectId = effectId;
+    const names = (effect.targetIds || []).map(function (id) {
+      const member = findPartyMember(state.party, id);
+      return member ? member.name : null;
+    }).filter(Boolean);
+    const max = Number(effect.initialDuration) || 0;
+    const current = Math.max(Number(effect.duration) || 0, 0);
+    const body = document.getElementById('effectDetailBody');
+    body.innerHTML =
+      '<div class="effect-detail-name">' + escapeHtml(effect.name) + '</div>' +
+      '<div class="effect-detail-section">' +
+        '<div class="encounter-field-label">Objetivos</div>' +
+        '<div class="compact-list">' + names.map(function (n) { return '<div class="list-item">' + escapeHtml(n) + '</div>'; }).join('') + '</div>' +
+      '</div>' +
+      '<div class="effect-detail-section">' +
+        '<div class="encounter-field-label">Duración</div>' +
+        '<div class="duration-block">' +
+          '<div class="duration-row"><span>' + current + ' / ' + max + ' ' + escapeHtml(effect.unit) + '</span></div>' +
+          renderAsciiProgress(current, max) +
+        '</div>' +
+      '</div>' +
+      '<div class="modal-actions">' +
+        '<button type="button" id="effectDetailEditBtn" class="tui-button white-255 black-255-text">Editar</button>' +
+        '<button type="button" id="effectDetailDeleteBtn" class="tui-button white-255 black-255-text">Eliminar</button>' +
+        '<button type="button" class="tui-button white-255 black-255-text btn-primary" data-close-modal>Cerrar</button>' +
+      '</div>';
+    openModal('effectDetailModal');
+  }
+
+  function requestDeleteEffect(effectId) {
+    const effect = state.dungeon.effects.find(function (item) { return item.id === effectId; });
+    if (!effect) return;
+    const targetIds = Array.isArray(effect.targetIds) ? effect.targetIds : [];
+    const hasRemaining = Number(effect.duration) > 0;
+    const isMulti = targetIds.length > 1;
+    if (!isMulti && !hasRemaining) {
+      performDeleteEffect(effectId);
+      return;
+    }
+    pendingDeleteEffectId = effectId;
+    const names = targetIds.map(function (id) {
+      const member = findPartyMember(state.party, id);
+      return member ? member.name : null;
+    }).filter(Boolean);
+    const affected = isMulti ? ('a ' + names.length + ' personajes.') : (names.length ? ('a ' + names[0] + '.') : 'a sus objetivos.');
+    document.getElementById('effectDeleteConfirmBody').innerHTML =
+      '¿Eliminar "' + escapeHtml(effect.name) + '"?<br />El efecto dejará de aplicarse ' + escapeHtml(affected);
+    closeModal('effectDetailModal');
+    openModal('effectDeleteConfirmModal');
+  }
+
+  function performDeleteEffect(effectId) {
+    const index = state.dungeon.effects.findIndex(function (item) { return item.id === effectId; });
+    if (index === -1) return;
+    const name = state.dungeon.effects[index].name;
+    state.dungeon.effects.splice(index, 1);
+    NS.addLog(state, 'Efecto eliminado: ' + name + '.');
+    closeModal('effectDeleteConfirmModal');
+    closeModal('effectDetailModal');
     render();
   }
 
@@ -1249,9 +2223,49 @@
     if (!Array.isArray(dungeon.rules.explorationActions)) {
       dungeon.rules.explorationActions = NS.createEmptyCampaign().dungeon.rules.explorationActions;
     }
+    // Campañas guardadas antes de "Ubicación actual": se crea vacía, nunca
+    // se inventa dónde está el grupo.
+    if (!dungeon.location) {
+      dungeon.location = { name: '', level: '', reference: '', notes: '' };
+    }
     (dungeon.lightSources || []).forEach(function (source) {
       if (source.warnedLow === undefined) source.warnedLow = false;
       if (source.exhausted === undefined) source.exhausted = false;
+    });
+    // Compat legacy: efectos guardados antes de multiobjetivo tenían
+    // targetId (referencia singular) o character (nombre de texto suelto).
+    // Se migran de forma transparente a targetIds[] la primera vez que se
+    // cargan/importan, sin exigir ninguna acción manual.
+    (dungeon.effects || []).forEach(function (effect) {
+      if (Array.isArray(effect.targetIds)) return;
+      let ids = [];
+      if (effect.targetId) {
+        ids = [effect.targetId];
+      } else if (effect.character) {
+        const match = state.party.find(function (member) { return member.name === effect.character; });
+        if (match) ids = [match.id];
+      }
+      effect.targetIds = ids;
+      delete effect.targetId;
+      delete effect.character;
+    });
+  }
+
+  // Defensivo: si un personaje deja de existir en el grupo, sus efectos no
+  // deben romper el render. Se ejecuta en cada render() (coste trivial con
+  // grupos pequeños); un efecto que se queda sin objetivos válidos se
+  // retira de activos igual que si hubiera expirado por duración.
+  function reconcileEffectTargets() {
+    const partyIds = state.party.map(function (member) { return member.id; });
+    state.dungeon.effects = state.dungeon.effects.filter(function (effect) {
+      if (!Array.isArray(effect.targetIds)) return true;
+      const before = effect.targetIds.length;
+      effect.targetIds = effect.targetIds.filter(function (id) { return partyIds.indexOf(id) !== -1; });
+      if (effect.targetIds.length) return true;
+      if (before > 0 && effect.active) {
+        NS.addLog(state, 'Efecto finalizado (sin objetivos válidos): ' + effect.name + '.');
+      }
+      return false;
     });
   }
 
@@ -1293,6 +2307,16 @@
       state.meta = { lastSavedAt: null };
     } else if (state.meta.lastSavedAt === undefined) {
       state.meta.lastSavedAt = null;
+    }
+    // Campañas guardadas antes del Statblock Importer/Codex no tienen
+    // customContent (o no tienen encounters todavía): se crea vacío,
+    // nunca se inventan monstruos/PNJ/encuentros.
+    if (!state.customContent) {
+      state.customContent = { monsters: [], npcs: [], encounters: [] };
+    } else {
+      if (!Array.isArray(state.customContent.monsters)) state.customContent.monsters = [];
+      if (!Array.isArray(state.customContent.npcs)) state.customContent.npcs = [];
+      if (!Array.isArray(state.customContent.encounters)) state.customContent.encounters = [];
     }
   }
 
@@ -1356,7 +2380,146 @@
 
   bindClick('addCharacterConfirmBtn', addCharacterFromForm);
   bindClick('addLightConfirmBtn', addLightFromForm);
-  bindClick('addEffectConfirmBtn', addEffectFromForm);
+  bindClick('effectConfirmBtn', saveEffectFromForm);
+  bindClick('effectTargetsAllBtn', function () {
+    document.querySelectorAll('#effectTargetsList .effect-target-input').forEach(function (input) {
+      input.checked = true;
+    });
+  });
+  bindClick('effectTargetsClearBtn', function () {
+    document.querySelectorAll('#effectTargetsList .effect-target-input').forEach(function (input) {
+      input.checked = false;
+    });
+  });
+  bindClick('effectDeleteConfirmBtn', function () {
+    performDeleteEffect(pendingDeleteEffectId);
+  });
+
+  document.addEventListener('click', function (event) {
+    const row = event.target.closest('.effect-row');
+    if (row) {
+      openEffectDetail(row.dataset.effectId);
+      return;
+    }
+    if (event.target.closest('#effectDetailEditBtn')) {
+      openEditEffectModal(detailEffectId);
+      return;
+    }
+    if (event.target.closest('#effectDetailDeleteBtn')) {
+      requestDeleteEffect(detailEffectId);
+    }
+  });
+
+  const settingsThemeSelectEl = document.getElementById('settingsThemeInput');
+  if (settingsThemeSelectEl) {
+    settingsThemeSelectEl.addEventListener('change', function () {
+      applyTheme(settingsThemeSelectEl.value);
+    });
+  }
+
+  bindClick('settingsApplyBtn', function () {
+    const chosen = settingsThemeSelectEl ? settingsThemeSelectEl.value : DEFAULT_THEME;
+    const preferences = NS.storage.loadPreferences();
+    preferences.theme = chosen;
+    NS.storage.savePreferences(preferences);
+    settingsSavedTheme = chosen;
+    applyTheme(chosen);
+    closeModal('settingsModal');
+  });
+
+  bindClick('statblockAnalyzeBtn', analyzeStatblock);
+  bindClick('sbReviewSaveBtn', saveStatblockReview);
+  bindClick('sbReviewBackBtn', function () {
+    closeModal('statblockReviewModal');
+    openModal('statblockImportModal');
+  });
+  bindClick('sbReviewAddAttackBtn', function () {
+    const list = document.getElementById('sbReviewAttacksList');
+    if (list) list.appendChild(renderStatblockAttackRow(null));
+  });
+  bindClick('sbReviewAddAbilityBtn', function () {
+    const list = document.getElementById('sbReviewAbilitiesList');
+    if (list) list.appendChild(renderStatblockAbilityRow(null));
+  });
+
+  document.addEventListener('click', function (event) {
+    const removeAttackBtn = event.target.closest('.sb-attack-remove');
+    if (removeAttackBtn) {
+      const row = removeAttackBtn.closest('.statblock-attack-row');
+      if (row) row.remove();
+      return;
+    }
+    const removeAbilityBtn = event.target.closest('.sb-ability-remove');
+    if (removeAbilityBtn) {
+      const row = removeAbilityBtn.closest('.statblock-ability-row');
+      if (row) row.remove();
+    }
+  });
+
+  // --- Codex: wiring ----------------------------------------------------
+  document.querySelectorAll('.codex-tab-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      setCodexTab(btn.dataset.codexTab);
+    });
+  });
+
+  const codexSearchInputEl = document.getElementById('codexSearchInput');
+  if (codexSearchInputEl) {
+    codexSearchInputEl.addEventListener('input', renderCodexList);
+  }
+  const codexScopeFilterEl = document.getElementById('codexScopeFilter');
+  if (codexScopeFilterEl) {
+    codexScopeFilterEl.addEventListener('change', renderCodexList);
+  }
+
+  bindClick('codexNewBtn', openCodexNew);
+  bindClick('codexImportBtn', openStatblockImportModal);
+  bindClick('codexEditBtn', openCodexEdit);
+  bindClick('codexDeleteBtn', function () {
+    if (codexSelectedId) requestCodexDelete(codexActiveTab, codexSelectedId);
+  });
+  bindClick('codexDeleteConfirmBtn', performCodexDelete);
+  bindClick('codexEncounterAddCreatureBtn', openCodexCreatureSearch);
+  bindClick('codexEncounterSaveBtn', saveCodexEncounter);
+
+  const codexCreatureSearchInputEl = document.getElementById('codexCreatureSearchInput');
+  if (codexCreatureSearchInputEl) {
+    codexCreatureSearchInputEl.addEventListener('input', function () {
+      renderCodexCreatureSearchResults(codexCreatureSearchInputEl.value);
+    });
+  }
+
+  document.addEventListener('click', function (event) {
+    const codexRow = event.target.closest('.codex-row:not(.codex-row-header)');
+    if (codexRow && codexRow.dataset.codexId) {
+      codexSelectedId = codexRow.dataset.codexId;
+      renderCodexList();
+      openCodexDetailForSelected();
+      return;
+    }
+    const creaturePickRow = event.target.closest('.codex-creature-pick-row');
+    if (creaturePickRow && creaturePickRow.dataset.actorId) {
+      const list = document.getElementById('codexEncounterCreaturesList');
+      if (list) list.appendChild(renderCodexEncounterCreatureRow({ actorId: creaturePickRow.dataset.actorId, quantity: '1' }));
+      closeModal('codexCreatureSearchModal');
+      return;
+    }
+    if (event.target.closest('#codexActorDetailEditBtn')) {
+      openCodexEdit();
+      return;
+    }
+    if (event.target.closest('#codexActorDetailDeleteBtn')) {
+      if (codexSelectedId) requestCodexDelete(codexActiveTab, codexSelectedId);
+      return;
+    }
+    if (event.target.closest('#codexEncounterDetailEditBtn')) {
+      openCodexEdit();
+      return;
+    }
+    if (event.target.closest('#codexEncounterDetailDeleteBtn')) {
+      if (codexSelectedId) requestCodexDelete('encounter', codexSelectedId);
+    }
+  });
 
   const rulesetSelectEl = document.getElementById('rulesetSelect');
   if (rulesetSelectEl) {
@@ -1442,11 +2605,16 @@
     });
   });
 
-  document.querySelectorAll('[data-close-modal]').forEach(function (trigger) {
-    trigger.addEventListener('click', function () {
-      const modal = trigger.closest('.tui-modal');
-      if (modal) closeModal(modal.id);
-    });
+  // Delegado a propósito (a diferencia de data-open-modal, que solo vive
+  // en botones estáticos del HTML): varios popups de detalle construyen su
+  // botón "Cerrar" con innerHTML en tiempo de ejecución (efectos, fichas
+  // del Codex...), y un bindeo por elemento en el arranque nunca los
+  // habría encontrado — el clic no habría hecho nada.
+  document.addEventListener('click', function (event) {
+    const trigger = event.target.closest('[data-close-modal]');
+    if (!trigger) return;
+    const modal = trigger.closest('.tui-modal');
+    if (modal) closeModal(modal.id);
   });
 
   bindClick('modalOverlap', closeAllModals);
@@ -1539,13 +2707,13 @@
     if (!box) return;
     const lines = ['<strong>' + escapeHtml(result.expression) + '</strong>'];
     result.dice.forEach(function (d) {
-      const sep = d.kind === 'd66' ? '→' : '=';
-      lines.push(escapeHtml(d.notation) + ' → [' + d.rolls.join(', ') + '] ' + sep + ' ' + d.subtotal);
+      const sep = d.kind === 'd66' ? '->' : '=';
+      lines.push(escapeHtml(d.notation) + ' -> [' + d.rolls.join(', ') + '] ' + sep + ' ' + d.subtotal);
     });
     lines.push('Total: ' + result.total);
     if (result.comparison) {
       lines.push(result.comparison.operator + ' ' + result.comparison.target +
-        ' → <span class="dice-comparison-' + (result.comparison.success ? 'success' : 'fail') + '">' +
+        ' -> <span class="dice-comparison-' + (result.comparison.success ? 'success' : 'fail') + '">' +
         (result.comparison.success ? 'ÉXITO' : 'FALLO') + '</span>');
     }
     box.innerHTML = lines.join('<br>');
@@ -1682,7 +2850,8 @@
         newCampaignModal: 'newCampaignConfirmCreateBtn',
         replaceCampaignConfirmModal: 'replaceCampaignConfirmBtn',
         ruleChangeConfirmModal: 'ruleChangeConfirmBtn',
-        diceModal: 'diceRollBtn'
+        diceModal: 'diceRollBtn',
+        settingsModal: 'settingsApplyBtn'
       };
       for (const modalId in enterConfirmMap) {
         const modal = document.getElementById(modalId);
@@ -1695,6 +2864,27 @@
     }
 
     if (event.altKey || event.ctrlKey || event.metaKey) return;
+
+    const codexModalEl = document.getElementById('codexModal');
+    if (codexModalEl && codexModalEl.classList.contains('active') && !isTypingTarget(event)) {
+      if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+        event.preventDefault();
+        const items = getCodexFilteredItems();
+        const currentIndex = items.findIndex(function (item) { return item.id === codexSelectedId; });
+        const nextIndex = NS.ui.nextListIndex(event.key, currentIndex === -1 ? 0 : currentIndex, items.length);
+        if (nextIndex !== null) {
+          codexSelectedId = items[nextIndex].id;
+          renderCodexList();
+          scrollSelectedRowIntoView('codexList');
+        }
+        return;
+      }
+      if (event.key === 'Enter' && codexSelectedId) {
+        event.preventDefault();
+        openCodexDetailForSelected();
+        return;
+      }
+    }
 
     if (currentMode === 'combat' && !isTypingTarget(event)) {
       if (event.key === 'ArrowUp') {
@@ -1754,7 +2944,7 @@
     const button = document.getElementById('windowSizeBtn');
     if (!windowNode || !button) return;
     const isCompact = windowNode.classList.toggle('maximized');
-    button.textContent = isCompact ? '▣' : '▢';
+    button.textContent = isCompact ? 'O' : 'o';
     button.title = isCompact ? 'Restaurar ventana' : 'Minimizar ventana';
   });
 
@@ -1796,15 +2986,19 @@
     performGenerateEncounter();
   });
 
-  bindClick('explorationActionsBtn', openExplorationActionsModal);
+  bindClick('editLocationBtn', openLocationModal);
+  bindClick('locationSaveBtn', saveLocation);
 
-  const explorationActionsListEl = document.getElementById('explorationActionsList');
-  if (explorationActionsListEl) {
-    explorationActionsListEl.addEventListener('click', function (event) {
+  const dungeonPlayerActionsEl = document.getElementById('dungeonPlayerActions');
+  if (dungeonPlayerActionsEl) {
+    dungeonPlayerActionsEl.addEventListener('click', function (event) {
       const btn = event.target.closest('[data-action-id]');
       if (!btn) return;
-      NS.dungeon.performAction(state, btn.dataset.actionId);
-      closeModal('explorationActionsModal');
+      if (btn.dataset.actionId === 'rest') {
+        NS.dungeon.rest(state);
+      } else {
+        NS.dungeon.performAction(state, btn.dataset.actionId);
+      }
       render();
     });
   }
@@ -2088,6 +3282,8 @@
       .map(function (part) { return String(part).padStart(2, '0'); })
       .join(':');
   }
+
+  applyTheme(getSavedTheme());
 
   tickClock();
   setInterval(tickClock, 1000);

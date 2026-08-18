@@ -4,167 +4,505 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>OSR Manager</title>
-  <meta name="description" content="Herramienta portable para gestionar exploración, hexcrawl, encuentros y combate en juegos OSR. Sin backend, sin instalación, sin build." />
+  <meta name="description" content="OSR Manager es una herramienta portable para directores de juego de RPG old-school. Gestiona exploración, hexcrawl, encuentros, combate y recursos desde el navegador, offline y sin instalación." />
+  <meta property="og:title" content="OSR Manager" />
+  <meta property="og:description" content="Una ayuda de mesa para dirigir partidas OSR. Portable, offline, sin instalación." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://favashi.github.io/osr-manager/" />
+
+  <!-- CSS real de la app (framework TuiCss + variables/temas propios de
+       OSR Manager): la landing NO redefine paleta ni componentes, los
+       consume directamente. site/css es un symlink a ../css (mismo
+       fichero real, cero duplicación) para que esta ruta funcione tanto
+       en local (abriendo site/index.html directamente) como en el sitio
+       publicado, donde el workflow de Pages copia css/ también a
+       ./css/ en la raíz del sitio. -->
+  <link rel="stylesheet" href="./css/tui.css" />
+  <link rel="stylesheet" href="./css/custom.css" />
+
   <style>
-    :root {
-      color-scheme: dark;
-      --bg: #05060c;
-      --panel: rgba(0, 0, 0, 0.35);
-      --border: rgba(255, 255, 255, 0.45);
-      --text: #fff;
-      --muted: rgba(255, 255, 255, 0.65);
-      --accent: rgb(255, 255, 0);
-      --dungeon: rgb(255, 176, 0);
-      --wilderness: rgb(0, 168, 168);
-      --combat: rgb(168, 0, 0);
-    }
+    /* CSS propio de la landing: SOLO layout/composición. Colores,
+       botones, cabeceras de panel y bordes proceden de tui.css/custom.css
+       (arriba) vía las mismas variables y clases que usa la aplicación. */
 
     * { box-sizing: border-box; }
 
+    html { scroll-behavior: smooth; }
+
     body {
       margin: 0;
-      min-height: 100vh;
-      background-color: var(--bg);
-      color: var(--text);
-      font-family: "Courier New", ui-monospace, Menlo, Consolas, monospace;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 32px 16px;
+      padding: 28px 20px;
+      /* Mismo micro-dither DOS/EGA que .app-desktop en custom.css, sobre
+         las variables reales (se re-tematiza solo). */
+      background-image:
+        repeating-linear-gradient(45deg, var(--desktop-tint) 0px, var(--desktop-tint) 1px, transparent 1px, transparent 4px),
+        repeating-linear-gradient(-45deg, var(--desktop-tint) 0px, var(--desktop-tint) 1px, transparent 1px, transparent 4px);
+      background-size: 4px 4px;
     }
 
-    main {
-      max-width: 640px;
-      width: 100%;
+    main { max-width: 1180px; margin: 0 auto; }
+
+    img { max-width: 100%; height: auto; display: block; }
+
+    .footer-row a, .hero-secondary a { text-decoration: underline; }
+    a:hover, a:focus-visible { color: var(--focus); }
+
+    /* --- La hoja: un único objeto que estructura toda la página, con el
+       mismo marco doble que .tui-fieldset y el fondo real de ventana
+       (--app-bg). Las secciones son filas separadas por reglas, no cajas
+       sueltas. --- */
+    .sheet {
+      background: var(--app-bg);
+      border: 6px double var(--border);
+    }
+
+    .row {
+      padding: 30px 44px;
+      border-top: 2px solid var(--border);
+    }
+
+    .row:first-child { border-top: none; }
+
+    /* Cabecera de sección = misma barra que .tui-panel-header (gris de
+       tema, texto oscuro), a sangre con el borde de la fila. */
+    .section-title {
+      margin: -30px -44px 20px;
+      padding: 10px 44px;
+      font-size: 1.15em;
+      font-weight: bold;
+      letter-spacing: 0.03em;
+    }
+
+    .lede { margin: 0; opacity: 0.8; }
+
+    .highlight {
+      color: var(--focus);
+      font-weight: bold;
+      letter-spacing: 0.03em;
+    }
+
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin: 20px 0 14px;
+    }
+
+    /* Oculto por defecto en el fuente: el workflow de Pages quita el
+       token "release-only" del atributo class en la copia publicada SOLO
+       si ya existe una Release (ver .github/workflows/pages.yml). Sin
+       Release todavía, no debe haber un enlace de descarga roto. */
+    .release-only { display: none; }
+
+    /* --- Selector de tema: mismo patrón visual que las pestañas de modo
+       (.mode-btn), botón real + corchetes vía ::before/::after cuando
+       está activo. --- */
+    .theme-toggle {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .theme-btn { min-width: 96px; }
+
+    .theme-btn.active {
+      background: var(--focus) !important;
+      color: var(--focus-text) !important;
+    }
+
+    .theme-btn.active::before { content: '[ '; }
+    .theme-btn.active::after { content: ' ]'; }
+
+    /* --- Hero: portada de módulo, ocupa toda la fila --- */
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding-top: 54px;
+    }
+
+    .module-code {
+      position: absolute;
+      top: 14px;
+      left: 44px;
+      border: 1px solid var(--border);
+      padding: 3px 10px;
+      font-size: 0.78em;
+      letter-spacing: 0.1em;
+      opacity: 0.8;
+    }
+
+    .ribbon {
+      position: absolute;
+      top: 26px;
+      right: -58px;
+      width: 230px;
+      transform: rotate(45deg);
+      background: var(--focus);
+      color: var(--focus-text);
+      text-align: center;
+      font-size: 0.78em;
+      font-weight: bold;
+      letter-spacing: 0.06em;
+      line-height: 1.5;
+      padding: 5px 0;
+      border-top: 2px solid var(--focus-text);
+      border-bottom: 2px solid var(--focus-text);
     }
 
     .logo {
-      font-size: 0.8em;
+      font-size: 1.05em;
       line-height: 1.1;
       white-space: pre;
-      margin: 0 0 8px;
-      color: var(--accent);
+      margin: 0 0 10px;
+      color: var(--focus);
     }
 
     h1 {
       margin: 0 0 4px;
-      font-size: 1.6em;
-      letter-spacing: 0.05em;
+      font-size: 2.6em;
+      font-weight: bold;
+      letter-spacing: 0.03em;
+      line-height: 1.05;
+    }
+
+    .subtitle-tag {
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-size: 0.8em;
+      font-weight: bold;
+      opacity: 0.8;
+      margin: 0 0 20px;
     }
 
     .tagline {
-      margin: 0 0 24px;
-      color: var(--muted);
+      margin: 0 0 6px;
+      font-size: 1.15em;
     }
 
-    .panel {
-      background: var(--panel);
-      border: 2px solid var(--border);
-      padding: 16px 20px;
-      margin-bottom: 16px;
-    }
-
-    .panel h2 {
-      margin: 0 0 10px;
-      font-size: 1em;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    ul.features {
+    .tagline-sub {
       margin: 0;
-      padding-left: 1.2em;
-      color: var(--text);
+      max-width: 560px;
+      opacity: 0.8;
     }
 
-    ul.features li { margin-bottom: 6px; }
-
-    ul.features .tag {
-      font-weight: bold;
-    }
-
-    .tag-dungeon { color: var(--dungeon); }
-    .tag-wilderness { color: var(--wilderness); }
-    .tag-combat { color: var(--combat); }
-
-    .cta {
+    .hero-secondary {
       display: flex;
       flex-wrap: wrap;
-      gap: 12px;
-      margin: 24px 0;
+      align-items: baseline;
+      gap: 6px 18px;
+      margin: 18px 0 0;
+      font-size: 0.9em;
     }
 
-    .btn {
-      display: inline-block;
-      padding: 10px 18px;
-      border: 2px solid var(--border);
-      background: rgba(255, 255, 255, 0.08);
-      color: var(--text);
-      text-decoration: none;
-      font-family: inherit;
-      font-size: 1em;
+    .version-line { opacity: 0.8; }
+
+    /* --- Captura principal: conectada al Hero, sin margen propio --- */
+    .shot-row { padding-top: 22px; padding-bottom: 30px; }
+
+    .shot-frame {
+      border: 6px double var(--border);
+      padding: 6px;
     }
 
-    .btn:hover, .btn:focus-visible {
-      background: var(--accent);
-      color: #000;
-      border-color: #000;
+    .shot-inner { border: 1px solid var(--border); }
+
+    /* --- Modos: fila a todo lo ancho, columnas separadas por líneas.
+       Único sitio de la página con color por modo (--mode-*). --- */
+    .mode-row { padding: 0; }
+
+    .mode-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
     }
 
-    .btn.primary {
-      border-color: var(--accent);
+    .mode-col {
+      padding: 28px 32px;
+      border-left: 2px solid var(--border);
+      box-shadow: inset 0 4px 0 0 var(--mode-color);
     }
 
-    footer {
-      color: var(--muted);
-      font-size: 0.85em;
-      line-height: 1.6;
+    .mode-col:first-child { border-left: none; }
+
+    .mode-col h3 {
+      margin: 0 0 6px;
+      font-size: 1.05em;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-weight: bold;
+      color: var(--mode-color);
     }
 
-    footer a { color: var(--wilderness); }
+    .mode-col p { margin: 0; opacity: 0.8; }
+
+    .mode-dungeon { --mode-color: var(--mode-dungeon); }
+    .mode-wilderness { --mode-color: var(--mode-wilderness); }
+    .mode-combat { --mode-color: var(--mode-combat); }
+
+    /* --- Filosofía: franja fina --- */
+    .philosophy-row { padding: 22px 44px; text-align: center; }
+    .philosophy-row p { margin: 0 0 4px; opacity: 0.8; }
+    .philosophy-row p:last-child { margin-bottom: 0; }
+
+    /* --- Herramientas + Portable: unificadas en una sola fila, 2 col --- */
+    .split-row { padding: 0; }
+
+    .split-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .split-col { padding: 26px 34px; }
+
+    .split-col + .split-col { border-left: 2px solid var(--border); }
+
+    .split-col .section-title { margin: -26px -34px 16px; padding: 10px 34px; }
+
+    ul.tool-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      opacity: 0.8;
+      columns: 2;
+      column-gap: 24px;
+    }
+
+    ul.tool-list li { margin-bottom: 4px; }
+
+    ul.portable-list {
+      list-style: none;
+      margin: 0 0 4px;
+      padding: 0;
+      opacity: 0.8;
+    }
+
+    ul.portable-list li { margin-bottom: 3px; }
+
+    /* --- Apoya el proyecto --- */
+    .support-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      border-top: 6px double var(--border);
+    }
+    .support-text h2 { margin: 0 0 8px; }
+
+    /* --- Footer --- */
+    .footer-row { padding: 16px 44px; font-size: 0.85em; text-align: center; }
+    .footer-row p { margin: 0 0 4px; opacity: 0.8; }
+    .footer-row p:last-child { margin-bottom: 0; }
+
+    @media (max-width: 900px) {
+      main { max-width: 100%; }
+      .row { padding: 24px 28px; }
+      .section-title { margin: -24px -28px 20px; padding: 10px 28px; }
+      .split-col { padding: 22px 28px; }
+      .split-col .section-title { margin: -22px -28px 16px; padding: 10px 28px; }
+      .hero { padding-top: 50px; }
+      h1 { font-size: 2.1em; }
+      .ribbon { right: -54px; width: 210px; }
+    }
+
+    @media (max-width: 760px) {
+      .split-grid { grid-template-columns: 1fr; }
+      .split-col + .split-col { border-left: none; border-top: 2px solid var(--border); }
+      ul.tool-list { columns: 1; }
+    }
+
+    @media (max-width: 640px) {
+      .mode-grid { grid-template-columns: 1fr; }
+      .mode-col { border-left: none; border-top: 2px solid var(--border); }
+      .mode-col:first-child { border-top: none; }
+      .support-row { flex-direction: column; align-items: flex-start; text-align: left; }
+    }
+
+    @media (max-width: 520px) {
+      .row { padding: 20px 18px; }
+      .section-title { margin: -20px -18px 16px; padding: 8px 18px; }
+      .split-col { padding: 18px 18px; }
+      .split-col .section-title { margin: -18px -18px 14px; padding: 8px 18px; }
+      .hero { padding-top: 46px; }
+      h1 { font-size: 1.7em; }
+      .module-code { left: 18px; font-size: 0.68em; }
+      .ribbon { top: 18px; right: -60px; width: 190px; font-size: 0.68em; }
+      .cta-row { flex-direction: column; align-items: stretch; }
+      .cta-row .tui-button { text-align: center; }
+      .theme-toggle { justify-content: center; }
+    }
   </style>
+
+  <script>
+    // Aplica el tema guardado antes del primer pintado (mismo patrón e
+    // idéntica clave de localStorage que index.html; landing y app
+    // comparten origen en el sitio publicado, así que comparten
+    // preferencia). No sincroniza con la copia portable (file://):
+    // localStorage es propio de cada origen.
+    (function () {
+      var VALID_THEMES = ['ega-blue', 'amber', 'green', 'mono', 'cga', 'phosphor'];
+      try {
+        var raw = localStorage.getItem('osr-manager-preferences');
+        var theme = raw ? JSON.parse(raw).theme : null;
+        document.documentElement.dataset.theme = VALID_THEMES.indexOf(theme) !== -1 ? theme : 'ega-blue';
+      } catch (error) {
+        document.documentElement.dataset.theme = 'ega-blue';
+      }
+    })();
+  </script>
 </head>
 <body>
   <main>
-    <pre class="logo"> ██████╗ ███████╗██████╗
+    <div class="sheet">
+
+      <div class="row">
+        <div class="theme-toggle" role="group" aria-label="Tema visual">
+          <button type="button" class="tui-button white-168 theme-btn" data-theme-choice="ega-blue">EGA</button>
+          <button type="button" class="tui-button white-168 theme-btn" data-theme-choice="phosphor">FÓSFORO</button>
+        </div>
+      </div>
+
+      <div class="row hero">
+        <div class="module-code">OSR-01</div>
+        <div class="ribbon">PORTABLE<br />SIN INSTALAR</div>
+
+        <pre class="logo"> ██████╗ ███████╗██████╗
 ██╔═══██╗██╔════╝██╔══██╗
 ██║   ██║███████╗██████╔╝
 ██║   ██║╚════██║██╔══██╗
 ╚██████╔╝███████║██║  ██║
  ╚═════╝ ╚══════╝╚═╝  ╚═╝</pre>
-    <h1>OSR MANAGER</h1>
-    <p class="tagline">Herramienta portable para gestionar exploración, hexcrawl, encuentros y combate en juegos OSR.</p>
+        <h1>OSR MANAGER</h1>
+        <p class="subtitle-tag">Herramienta para directores de juego</p>
+        <p class="tagline">Una ayuda de mesa para dirigir partidas OSR.</p>
+        <p class="tagline-sub">Exploración, hexcrawl, encuentros y combate sin convertir la partida en un VTT.</p>
 
-    <div class="panel">
-      <h2>Qué es</h2>
-      <p>Aplicación 100% cliente: HTML + CSS + JavaScript, sin backend, sin instalación, sin build. Se abre directamente en el navegador — la misma app funciona en local (<code>file://</code>) y aquí en la web.</p>
+        <div class="cta-row">
+          <a class="tui-button white-255 black-255-text btn-primary" href="./app/">Abrir online · v<span>__OSR_VERSION__</span> →</a>
+          <a class="tui-button white-255 black-255-text release-only" href="https://github.com/Favashi/osr-manager/releases/latest/download/osr-manager.zip">Descargar ZIP · v<span>__OSR_VERSION__</span> ↓</a>
+        </div>
+        <p class="hero-secondary">
+          <a href="https://github.com/Favashi/osr-manager">Código fuente en GitHub →</a>
+          <span class="version-line">Portable · Sin instalación · Funciona offline</span>
+        </p>
+      </div>
+
+      <div class="row shot-row">
+        <div class="shot-frame">
+          <div class="shot-inner">
+            <img src="./screenshots/mazmorra.png" alt="OSR Manager en modo Mazmorra, mostrando turno, luz, efectos y encuentro" loading="lazy" />
+          </div>
+        </div>
+      </div>
+
+      <div class="row mode-row">
+        <div class="mode-grid">
+          <div class="mode-col mode-dungeon">
+            <h3>Mazmorra</h3>
+            <p>Turnos, luz, efectos y encuentros.</p>
+          </div>
+          <div class="mode-col mode-wilderness">
+            <h3>Exterior</h3>
+            <p>Hexcrawl, viajes, clima y recursos.</p>
+          </div>
+          <div class="mode-col mode-combat">
+            <h3>Combate</h3>
+            <p>Iniciativa, rondas, PG y estados.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="row philosophy-row">
+        <p>Hecho para acompañar tus libros, dados, fichas y mapas, no para sustituirlos.</p>
+        <p class="highlight">Menos gestión. Más partida.</p>
+      </div>
+
+      <div class="row split-row">
+        <div class="split-grid">
+          <div class="split-col">
+            <h2 class="tui-panel-header section-title">Herramientas</h2>
+            <ul class="tool-list">
+              <li>Dados</li>
+              <li>PX</li>
+              <li>Statblocks</li>
+              <li>Codex</li>
+              <li>Encuentros</li>
+            </ul>
+          </div>
+          <div class="split-col">
+            <h2 class="tui-panel-header section-title">Portable</h2>
+            <ul class="portable-list">
+              <li>Sin cuenta</li>
+              <li>Sin instalación</li>
+              <li>Funciona offline</li>
+            </ul>
+            <div class="cta-row">
+              <a class="tui-button white-255 black-255-text btn-primary" href="./app/">Abrir online · v<span>__OSR_VERSION__</span> →</a>
+              <a class="tui-button white-255 black-255-text release-only" href="https://github.com/Favashi/osr-manager/releases/latest/download/osr-manager.zip">Descargar ZIP · v<span>__OSR_VERSION__</span> ↓</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row support-row">
+        <div class="support-text">
+          <h2>¿Te resulta útil?</h2>
+          <p class="lede">OSR Manager es gratuito. Si quieres apoyar su desarrollo:</p>
+        </div>
+        <a class="tui-button white-255 black-255-text" href="https://buymeacoffee.com/toniruiz">☕ Invítame a un café</a>
+      </div>
+
+      <div class="row footer-row">
+        <p><a href="https://github.com/Favashi/osr-manager">GitHub</a> · <a href="https://github.com/Favashi/osr-manager/blob/main/README.md">README</a> · <a href="https://github.com/Favashi/osr-manager/blob/main/LICENSE">LICENSE</a> · <a href="https://github.com/Favashi/osr-manager/blob/main/THIRD_PARTY_NOTICES.md">THIRD_PARTY_NOTICES.md</a></p>
+        <p>Hecho por <a href="https://github.com/Favashi">Toni Ruiz (Favashi)</a></p>
+      </div>
+
     </div>
-
-    <div class="panel">
-      <h2>Modos</h2>
-      <ul class="features">
-        <li><span class="tag tag-dungeon">Mazmorra</span> — turnos, luz, efectos, descanso, encuentros.</li>
-        <li><span class="tag tag-wilderness">Exterior</span> — hexcrawl: viaje por hexes, terreno, recursos, clima, caza, campamento.</li>
-        <li><span class="tag tag-combat">Combate</span> — iniciativa, daño/curación, estados, moral y reacción.</li>
-      </ul>
-    </div>
-
-    <div class="panel">
-      <h2>Sistemas compatibles</h2>
-      <p>Ruleset Core con perfiles para Aventuras en la Marca del Este, Old-School Essentials, B/X, BECMI, LotFP, OD&amp;D/0e y AD&amp;D 1e.</p>
-    </div>
-
-    <div class="cta">
-      <a class="btn primary" href="app/">Abrir la app →</a>
-      <a class="btn" href="https://github.com/Favashi/osr-manager">Código en GitHub</a>
-      <a class="btn" href="https://buymeacoffee.com/toniruiz">☕ Invítame a un café</a>
-    </div>
-
-    <footer>
-      <p>Guardado local en el navegador (<code>localStorage</code>) + exportar/importar campaña como JSON. Sin cuentas, sin servidores, sin telemetría.</p>
-      <p>Código MIT. Ver <a href="https://github.com/Favashi/osr-manager/blob/main/LICENSE">LICENSE</a> y <a href="https://github.com/Favashi/osr-manager/blob/main/THIRD_PARTY_NOTICES.md">THIRD_PARTY_NOTICES.md</a>.</p>
-      <p>Hecho por <a href="https://github.com/Favashi">Toni Ruiz (Favashi)</a>.</p>
-    </footer>
   </main>
+
+  <script>
+    (function () {
+      var PREFERENCES_KEY = 'osr-manager-preferences';
+
+      function loadPreferences() {
+        try {
+          var raw = localStorage.getItem(PREFERENCES_KEY);
+          return raw ? JSON.parse(raw) : {};
+        } catch (error) {
+          return {};
+        }
+      }
+
+      function savePreferences(preferences) {
+        try {
+          localStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferences || {}));
+        } catch (error) {
+          // localStorage puede no estar disponible (privado/bloqueado): el
+          // toggle sigue funcionando para esta visita, solo no persiste.
+        }
+      }
+
+      function applyTheme(themeId) {
+        document.documentElement.dataset.theme = themeId;
+        var buttons = document.querySelectorAll('.theme-btn');
+        for (var i = 0; i < buttons.length; i++) {
+          var isActive = buttons[i].getAttribute('data-theme-choice') === themeId;
+          buttons[i].classList.toggle('active', isActive);
+        }
+      }
+
+      var toggleButtons = document.querySelectorAll('.theme-btn');
+      for (var i = 0; i < toggleButtons.length; i++) {
+        toggleButtons[i].addEventListener('click', function () {
+          var themeId = this.getAttribute('data-theme-choice');
+          var preferences = loadPreferences();
+          preferences.theme = themeId;
+          savePreferences(preferences);
+          applyTheme(themeId);
+        });
+      }
+
+      applyTheme(document.documentElement.dataset.theme);
+    })();
+  </script>
 </body>
 </html>
