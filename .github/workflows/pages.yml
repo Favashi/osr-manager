@@ -198,7 +198,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ "${{ inputs.publish_release }}" = "true" ] || gh release view latest --repo "${{ github.repository }}" >/dev/null 2>&1; then
+          if [ "${{ inputs.publish_release }}" = "true" ] || gh release view --repo "${{ github.repository }}" >/dev/null 2>&1; then
             echo "has_release=true" >> "$GITHUB_OUTPUT"
           else
             echo "has_release=false" >> "$GITHUB_OUTPUT"
