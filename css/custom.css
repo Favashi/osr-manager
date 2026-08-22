@@ -75,53 +75,19 @@
   --mode-dungeon-text: #000;
   --mode-wilderness: rgb(190, 150, 60);
   --mode-wilderness-text: #000;
-  --mode-combat: rgb(255, 90, 40);
-  --mode-combat-text: #000;
+  /* Ámbar oscuro, no rojo: mismo hueco naranja/ámbar que el resto del
+     tema, solo más oscuro y saturado para leerse como "alerta". */
+  --mode-combat: rgb(140, 70, 0);
+  --mode-combat-text: rgb(255, 210, 150);
 
   --warning: rgb(255, 191, 0);
-  --critical: rgb(255, 70, 40);
+  --critical: rgb(200, 100, 0);
 
   --progress-empty: rgba(0, 0, 0, 0.4);
   --progress-normal: rgb(255, 180, 60);
   --progress-warning: rgb(255, 140, 0);
-  --progress-critical: rgb(255, 70, 40);
+  --progress-critical: rgb(200, 100, 0);
   --progress-dimmed: rgba(255, 220, 180, 0.4);
-}
-
-/* Terminal Verde: CRT verde clásico, sin glow/scanlines/blur — solo paleta. */
-:root[data-theme="green"] {
-  --desktop-bg: #020804;
-  --desktop-tint: rgba(40, 120, 60, 0.05);
-
-  --app-bg: rgb(0, 40, 10);
-  --panel-bg: rgb(100, 200, 110);
-  --panel-bg-text: rgb(0, 0, 0);
-  --button-bg: rgb(170, 255, 180);
-
-  --text: rgb(120, 255, 140);
-  --border: rgb(120, 255, 140);
-
-  --focus: rgb(255, 255, 255);
-  --focus-text: rgb(0, 0, 0);
-
-  --disabled: rgb(50, 100, 55);
-  --disabled-text: rgb(170, 210, 175);
-
-  --mode-dungeon: rgb(200, 255, 80);
-  --mode-dungeon-text: #000;
-  --mode-wilderness: rgb(80, 255, 200);
-  --mode-wilderness-text: #000;
-  --mode-combat: rgb(255, 90, 90);
-  --mode-combat-text: #000;
-
-  --warning: rgb(200, 255, 80);
-  --critical: rgb(255, 70, 70);
-
-  --progress-empty: rgba(0, 0, 0, 0.4);
-  --progress-normal: rgb(120, 255, 140);
-  --progress-warning: rgb(200, 255, 80);
-  --progress-critical: rgb(255, 70, 70);
-  --progress-dimmed: rgba(180, 230, 190, 0.4);
 }
 
 /* Monocromo: negro/grises/blanco. Los modos se distinguen por contraste
@@ -278,6 +244,15 @@ select {
 .app-shell {
   width: 100%;
   min-height: 100vh;
+  /* svh = alto de viewport "pequeño" (asume la barra de direcciones del
+     móvil siempre visible). dvh (dinámico) parecía mejor opción pero se
+     recalcula EN VIVO mientras el usuario hace scroll y la barra se
+     oculta/aparece — eso es lo que hacía "saltar" la ventana/footer a
+     mitad de scroll. svh es un valor estable, no cambia durante el
+     scroll, a costa de un margen sin usar cuando la barra se oculta. Se
+     declara después de vh a propósito: si el navegador no soporta svh,
+     ignora esta línea y se queda con vh. */
+  min-height: 100svh;
   display: flex;
   align-items: safe center;
   justify-content: safe center;
@@ -300,6 +275,7 @@ select {
      libre hasta max-height. Solo .maximized (abajo) usa el viewport. */
   width: min(920px, 100%);
   max-height: 92vh;
+  max-height: 92svh;
   margin: auto;
   padding: 0;
   display: flex;
@@ -318,7 +294,33 @@ select {
   width: min(1920px, 98vw);
   max-width: min(1920px, 98vw);
   height: min(1080px, 95vh);
+  height: min(1080px, 95svh);
   max-height: min(1080px, 95vh);
+  max-height: min(1080px, 95svh);
+}
+
+/* Scanlines (CRT): opt-in desde Ajustes, no forma parte de ningún tema.
+   Líneas horizontales finas y sutiles, sin glow/blur/flicker/curvatura —
+   solo la textura. La clase va en <html> (no en .app-window) para que
+   alcance también a los popups (.modal-window), que son hermanos fuera
+   de .app-window en el DOM. pointer-events:none para no interferir con
+   clics; .tui-window ya trae position:relative, así que ::after se
+   ancla a cada ventana sin tocar su layout. */
+html.scanlines-on .app-window::after,
+html.scanlines-on .modal-window::after,
+html.scanlines-on .dos-menu-panel.is-open::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.12) 0px,
+    rgba(0, 0, 0, 0.12) 1px,
+    transparent 1px,
+    transparent 3px
+  );
 }
 
 /* Normal (~920px de ancho): reducir gaps/padding antes que permitir
@@ -341,7 +343,14 @@ select {
   margin: 0;
   border: none;
   padding: 0;
-  min-height: 100%;
+  /* min-height:0 (no 100%) es lo que de verdad permite que este flex
+     item se encoja dentro de .app-window y su propio overflow-y:auto
+     haga el scroll interno. flex:1 ya se encarga de que rellene el
+     espacio cuando el contenido es corto; min-height:100% no ayudaba
+     ahí y en su lugar bloqueaba el encogido cuando el contenido es
+     largo — sobre todo en Safari/iOS, donde el bug del footer "saltando"
+     al hacer scroll venía de aquí, no de las unidades de viewport. */
+  min-height: 0;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -353,6 +362,11 @@ select {
   position: relative;
   width: 100%;
   margin: 0 0 10px;
+  /* Ahora es hermano de .app-fieldset (no hijo) dentro de .app-window,
+     para quedarse fijo arriba mientras solo .app-fieldset scrollea
+     internamente; flex-shrink:0 evita que .app-fieldset (flex:1) lo
+     encoja. */
+  flex-shrink: 0;
 }
 
 .dos-menu-bar {
@@ -365,6 +379,20 @@ select {
   color: var(--panel-bg-text);
   border-bottom: 2px solid #000;
   padding: 0;
+  /* En viewports estrechos (.app-window ya se limita a 100% de ancho) los
+     4 grupos + nombre + reloj no caben: sin esto, .app-window's overflow:
+     hidden recorta "Ayuda" y parte de "Herramientas", dejándolos
+     inalcanzables. Mismo patrón que .status-strip/.initiative-rail, pero
+     aquí es navegación primaria, así que además se oculta la barra de
+     scroll nativa (fea/inesperada en móvil) y en la media query de abajo
+     se libera espacio para que quepa sin necesidad de deslizar. */
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.dos-menu-bar::-webkit-scrollbar {
+  display: none;
 }
 
 .dos-menu-icon {
@@ -488,6 +516,7 @@ select {
 }
 
 .dos-menu-panel {
+  position: relative;
   display: none;
   background: var(--panel-bg);
   border: 2px solid #000;
@@ -1177,6 +1206,7 @@ select {
 
 .codex-detail-body {
   max-height: 70vh;
+  max-height: 70svh;
   overflow-y: auto;
 }
 
@@ -1281,6 +1311,11 @@ select {
   border: 2px solid rgba(255, 255, 255, 0.5);
   overflow-x: auto;
   white-space: nowrap;
+  scrollbar-width: none;
+}
+
+.status-strip::-webkit-scrollbar {
+  display: none;
 }
 
 .status-strip.active {
@@ -1294,6 +1329,14 @@ select {
 
 .strip-divider {
   opacity: 0.5;
+}
+
+/* Agrupa Turno+Hora / Encuentro+Descanso (y Día+Hora / Terreno+Hex en
+   Exterior) para poder partir la tira en 2 líneas en móvil sin tocar
+   JS. display:contents en desktop = el wrapper no existe para el
+   layout, todo sigue en una sola línea igual que antes. */
+.status-row {
+  display: contents;
 }
 
 .two-col {
@@ -1406,6 +1449,11 @@ select {
   row-gap: 2px;
   align-items: center;
   overflow: visible;
+  /* Ahora es hermano de .app-fieldset (no hijo) dentro de .app-window,
+     para quedarse fijo abajo mientras solo .app-fieldset scrollea
+     internamente; flex-shrink:0 evita que .app-fieldset (flex:1) lo
+     encoja. */
+  flex-shrink: 0;
 }
 
 .app-statusbar span {
@@ -1456,6 +1504,7 @@ select {
   width: 380px;
   max-width: 92vw;
   max-height: 80vh;
+  max-height: 80svh;
   margin: auto;
   overflow-y: auto;
 }
@@ -1469,6 +1518,7 @@ select {
 .modal-window--large {
   width: min(1000px, 92vw);
   max-height: 85vh;
+  max-height: 85svh;
 }
 
 .modal-body {
@@ -1504,6 +1554,7 @@ select {
   display: flex;
   flex-direction: column;
   max-height: 60vh;
+  max-height: 60svh;
   overflow-y: auto;
 }
 
@@ -1618,6 +1669,11 @@ select {
   background: rgba(0, 0, 0, 0.18);
   border: 1px solid rgba(255, 255, 255, 0.35);
   white-space: nowrap;
+  scrollbar-width: none;
+}
+
+.initiative-rail::-webkit-scrollbar {
+  display: none;
 }
 
 .initiative-rail-item {
@@ -1789,6 +1845,57 @@ select {
 
   .dice-face-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  /* "OSR Manager" es redundante en móvil (ya está en el título de la
+     pestaña) y es lo que más espacio ocupa de la barra: quitarlo es lo
+     que de verdad libera sitio para que los 4 menús quepan sin depender
+     del scroll (ver overflow-x:auto en .dos-menu-bar, que se queda como
+     red de seguridad, no como mecanismo principal). */
+  .dos-app-name {
+    display: none;
+  }
+
+  .dos-menu-trigger {
+    padding: 5px 7px;
+  }
+
+  /* Reloj (el móvil ya tiene el suyo) y minimizar/maximizar (Normal vs
+     Maximizado no aporta nada en una pantalla ya pequeña) — fuera en
+     móvil, liberan sitio en la barra de menú. */
+  .dos-clock,
+  .dos-window-button {
+    display: none;
+  }
+
+  /* Turno|Hora|Encuentro|Descanso (y Día|Hora|Terreno|Hex en Exterior)
+     no caben en una línea en móvil. .status-strip pasa a permitir wrap;
+     .status-row pasa de display:contents a flex real y ocupa toda la
+     fila -> el segundo grupo cae debajo; el divisor central ya no hace
+     falta con los grupos apilados. */
+  .status-strip {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+
+  .status-row {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    width: 100%;
+  }
+
+  .status-row-divider {
+    display: none;
+  }
+
+  /* El "|" suelto en medio del hueco de space-between quedaba flotando
+     sin pegarse a ninguno de los dos valores. El propio hueco ya separa
+     visualmente Turno/Hora y Encuentro/Descanso, no hace falta carácter. */
+  .status-row .strip-divider {
+    display: none;
   }
 }
 

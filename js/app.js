@@ -652,13 +652,13 @@
   const THEMES = [
     { id: 'ega-blue', label: 'EGA Azul' },
     { id: 'amber', label: 'DOS Ámbar' },
-    { id: 'green', label: 'Terminal Verde' },
     { id: 'mono', label: 'Monocromo' },
     { id: 'cga', label: 'CGA Retro' },
     { id: 'phosphor', label: 'Fósforo Verde' }
   ];
   const DEFAULT_THEME = 'ega-blue';
   let settingsSavedTheme = DEFAULT_THEME;
+  let settingsSavedScanlines = false;
 
   function isValidTheme(themeId) {
     return THEMES.some(function (theme) { return theme.id === themeId; });
@@ -674,6 +674,18 @@
   function applyTheme(themeId) {
     const resolved = isValidTheme(themeId) ? themeId : DEFAULT_THEME;
     document.documentElement.dataset.theme = resolved;
+    return resolved;
+  }
+
+  // Scanlines (CRT): opt-in puramente decorativo, independiente del
+  // tema — misma capa de preferencias que el tema, pero su propia clave.
+  function getSavedScanlines() {
+    return NS.storage.loadPreferences().scanlines === true;
+  }
+
+  function applyScanlines(enabled) {
+    const resolved = enabled === true;
+    document.documentElement.classList.toggle('scanlines-on', resolved);
     return resolved;
   }
 
@@ -702,6 +714,7 @@
     const modal = document.getElementById('settingsModal');
     if (modal && modal.classList.contains('active')) {
       applyTheme(settingsSavedTheme);
+      applyScanlines(settingsSavedScanlines);
     }
   }
 
@@ -729,6 +742,12 @@
     const select = document.getElementById('settingsThemeInput');
     if (select) select.value = settingsSavedTheme;
     applyTheme(settingsSavedTheme);
+
+    settingsSavedScanlines = getSavedScanlines();
+    const scanlinesInput = document.getElementById('settingsScanlinesInput');
+    if (scanlinesInput) scanlinesInput.checked = settingsSavedScanlines;
+    applyScanlines(settingsSavedScanlines);
+
     openModal('settingsModal');
   }
 
@@ -2417,13 +2436,24 @@
     });
   }
 
+  const settingsScanlinesInputEl = document.getElementById('settingsScanlinesInput');
+  if (settingsScanlinesInputEl) {
+    settingsScanlinesInputEl.addEventListener('change', function () {
+      applyScanlines(settingsScanlinesInputEl.checked);
+    });
+  }
+
   bindClick('settingsApplyBtn', function () {
     const chosen = settingsThemeSelectEl ? settingsThemeSelectEl.value : DEFAULT_THEME;
+    const scanlinesChosen = settingsScanlinesInputEl ? settingsScanlinesInputEl.checked : false;
     const preferences = NS.storage.loadPreferences();
     preferences.theme = chosen;
+    preferences.scanlines = scanlinesChosen;
     NS.storage.savePreferences(preferences);
     settingsSavedTheme = chosen;
+    settingsSavedScanlines = scanlinesChosen;
     applyTheme(chosen);
+    applyScanlines(scanlinesChosen);
     closeModal('settingsModal');
   });
 
@@ -3284,6 +3314,7 @@
   }
 
   applyTheme(getSavedTheme());
+  applyScanlines(getSavedScanlines());
 
   tickClock();
   setInterval(tickClock, 1000);

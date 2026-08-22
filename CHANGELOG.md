@@ -5,6 +5,54 @@ Versionado [SemVer](https://semver.org/lang/es/) (mientras el proyecto esté
 por debajo de 1.0.0, cambios de versión menor pueden incluir funcionalidad
 nueva sin garantía de estabilidad de la API interna).
 
+## [0.4.0] - 2026-08-22
+
+### Añadido
+
+- **Tema Fósforo Verde** (`data-theme="phosphor"`): monitor monocromo
+  verde, solo tonalidades de verde (con negro para fondo/contraste) —
+  sin azul, cyan, rojo, amarillo, magenta ni blanco puro. Mismo sistema
+  de temas de Ajustes que el resto.
+- **Scanlines (CRT)**: efecto opcional desde Ajustes, independiente del
+  tema. Líneas horizontales finas y sutiles, sin glow/blur/flicker ni
+  curvatura. Se aplica a la ventana principal, los popups y los
+  desplegables del menú.
+- Landing (`site/index.html`) reutiliza directamente el CSS real de la
+  app (`site/css` → symlink a `../css`, cero duplicación de paleta) en
+  vez de redefinir su propia paleta, y añade un selector de tema
+  EGA/Fósforo arriba.
+
+### Cambiado
+
+- **Layout adaptado a móvil**: el menú superior y la barra de atajos
+  inferior eran hijos de `.app-fieldset` (el área que scrollea) en vez
+  de hermanos suyos — nunca estuvieron realmente fijos, solo lo parecía
+  porque en escritorio el contenido normalmente cabía sin necesitar
+  scroll. Ahora son hermanos reales dentro de `.app-window`, fijos
+  arriba/abajo mientras solo el contenido central scrollea.
+- Barra de menú: scrollable con barra oculta si no cabe (antes recortaba
+  "Ayuda" sin más, inalcanzable); en móvil se ocultan el nombre "OSR
+  Manager", el reloj y minimizar/maximizar (redundantes en una pantalla
+  pequeña) para que quepan los 4 menús.
+- Turno/Hora/Encuentro/Descanso (Mazmorra) y Día/Hora/Terreno/Hex
+  (Exterior): en móvil pasan de una línea recortada a dos, cada una a
+  todo el ancho.
+- DOS Ámbar: el rojo de Combate/crítico pasa a ámbar oscuro, coherente
+  con el resto de la paleta del tema.
+- Workflow de publicación: ya no pide la versión a mano al lanzarlo,
+  la lee directamente de `VERSION`.
+
+### Eliminado
+
+- Tema Terminal Verde: redundante con Fósforo Verde.
+
+### Corregido
+
+- El chequeo de Release existente en el workflow de Pages (`gh release
+  view latest`) buscaba un tag literal "latest" (no existe) en vez de
+  la última release — siempre fallaba, así que un deploy Solo-Pages
+  ocultaba "Descargar ZIP" aunque ya hubiera una Release publicada.
+
 ## [0.3.0] - 2026-08-19
 
 ### Añadido

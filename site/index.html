@@ -371,7 +371,7 @@
     // preferencia). No sincroniza con la copia portable (file://):
     // localStorage es propio de cada origen.
     (function () {
-      var VALID_THEMES = ['ega-blue', 'amber', 'green', 'mono', 'cga', 'phosphor'];
+      var VALID_THEMES = ['ega-blue', 'amber', 'mono', 'cga', 'phosphor'];
       try {
         var raw = localStorage.getItem('osr-manager-preferences');
         var theme = raw ? JSON.parse(raw).theme : null;
@@ -457,7 +457,7 @@
           <li><strong>Codex</strong> — biblioteca de Monstruos, PNJ y Encuentros: Biblioteca global del navegador + contenido de la campaña actual, sin duplicar.</li>
           <li><strong>Reglas</strong> — perfiles de sistema (Marca del Este, OSE, B/X, BECMI, LotFP, OD&amp;D, AD&amp;D 1e) que ajustan turno, iniciativa y CA.</li>
           <li><strong>Exportar / Importar</strong> — guarda la campaña como JSON, muévela entre ordenadores o entre la versión online y la portable.</li>
-          <li><strong>Temas</strong> — 6 paletas de color para la interfaz (EGA Azul, DOS Ámbar, Terminal Verde, Monocromo, CGA Retro, Fósforo Verde).</li>
+          <li><strong>Temas</strong> — 5 paletas de color para la interfaz (EGA Azul, DOS Ámbar, Monocromo, CGA Retro, Fósforo Verde).</li>
         </ul>
       </div>
 
