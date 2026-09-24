@@ -338,55 +338,73 @@
     .escriba-banner {
       position: relative;
       overflow: hidden;
-      display: grid;
-      grid-template-columns: auto 1fr;
-      align-items: center;
-      gap: 28px;
-      padding: 44px 40px 34px;
+      padding: 40px 40px 36px;
       border-radius: 6px;
       background: radial-gradient(ellipse at 50% 30%, #74398a, #5e2c72 85%);
       color: #fbf5ea;
       font-family: Georgia, 'Times New Roman', serif;
+      text-align: center;
     }
 
     .escriba-code {
       position: absolute;
       top: 12px;
-      left: 16px;
+      right: 16px;
+      z-index: 1;
       color: #f3c02f;
       font-family: 'Cinzel', Georgia, serif;
       font-weight: 700;
-      font-size: 1.05em;
-      letter-spacing: 0.08em;
+      font-size: 1.3em;
+      letter-spacing: 0.04em;
     }
 
+    /* Franja en esquina: contenedor cuadrado recortado + span girado
+       (mismas medidas que .corner-ribbon de Escriba), para que las dos
+       líneas quepan enteras dentro de la franja. */
     .escriba-ribbon {
       position: absolute;
-      top: 34px;
-      right: -78px;
-      width: 300px;
+      top: 0;
+      right: 0;
+      width: 240px;
+      height: 240px;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .escriba-ribbon span {
+      position: absolute;
+      top: 70px;
+      right: -80px;
+      width: 330px;
       transform: rotate(45deg);
+      padding: 7px 0 6px;
       background: linear-gradient(180deg, #f06a23, #e2451d);
-      color: #fff4c6;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
       text-align: center;
-      font-size: 0.66em;
-      font-weight: bold;
-      line-height: 1.35;
-      letter-spacing: 0.03em;
-      padding: 5px 0;
-      box-shadow: 0 2px 6px rgba(58, 22, 70, 0.5);
+      font: 700 0.62rem/1.25 Georgia, serif;
+      color: #fff4c6;
     }
 
     .escriba-seal {
-      width: 128px;
-      height: 128px;
+      width: 88px;
+      height: 88px;
+      margin: 0 auto 10px;
       filter: drop-shadow(0 4px 6px rgba(58, 22, 70, 0.6));
     }
 
-    .escriba-body { max-width: 560px; }
+    /* Marco interior: filete crema con línea oscura por dentro, como el
+       marco de la captura en la portada de Escriba. */
+    .escriba-frame {
+      max-width: 640px;
+      margin: 24px auto 0;
+      padding: 26px 30px 28px;
+      border: 3px solid #fbf5ea;
+      box-shadow: inset 0 0 0 3px #1c0d22, inset 0 0 0 4px rgba(251, 245, 234, 0.35);
+      background: radial-gradient(ellipse at 50% 20%, rgba(58, 22, 70, 0.55), rgba(24, 10, 30, 0.8));
+    }
 
     .escriba-kicker {
-      margin: 0 0 4px;
+      margin: 0 0 8px;
       font-variant: small-caps;
       letter-spacing: 0.06em;
       font-size: 1.05em;
@@ -397,7 +415,7 @@
       margin: 0;
       font-family: 'Uncial Antiqua', 'Cinzel', Georgia, serif;
       font-weight: normal;
-      font-size: 2.3em;
+      font-size: 2.6em;
       line-height: 1.1;
       color: #fbf5ea;
       text-shadow: 2px 2px 0 #3a1646, 0 0 10px rgba(58, 22, 70, 0.6);
@@ -407,8 +425,8 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      margin: 10px 0 6px;
-      max-width: 360px;
+      margin: 12px auto 8px;
+      max-width: 520px;
       color: #fbf5ea;
       font-size: 0.95em;
       line-height: 1;
@@ -422,12 +440,13 @@
     }
 
     .escriba-subtitle {
-      margin: 0 0 14px;
+      margin: 0;
+      font-weight: bold;
       font-variant: small-caps;
       letter-spacing: 0.08em;
     }
 
-    .escriba-text { margin: 0 0 20px; line-height: 1.5; }
+    .escriba-text { max-width: 520px; margin: 0 auto 20px; line-height: 1.5; }
 
     .escriba-button {
       display: inline-block;
@@ -470,6 +489,9 @@
     @media (max-width: 760px) {
       ul.tool-list { columns: 1; }
       .portable-grid { grid-template-columns: 1fr; gap: 20px; }
+      /* Estrecho: la franja de la esquina alcanza el centro, así que el
+         sello baja para no quedar debajo de ella. */
+      .escriba-banner { padding-top: 110px; }
     }
 
     @media (max-width: 640px) {
@@ -477,9 +499,8 @@
       .mode-col { border-left: none; border-top: 2px solid var(--border); }
       .mode-col:first-child { border-top: none; }
       .support-row { flex-direction: column; align-items: center; text-align: center; }
-      .escriba-banner { grid-template-columns: 1fr; justify-items: center; text-align: center; gap: 16px; padding: 64px 22px 28px; }
-      .escriba-seal { width: 104px; height: 104px; }
-      .escriba-rule { margin-left: auto; margin-right: auto; }
+      .escriba-banner { padding: 110px 22px 28px; }
+      .escriba-frame { padding: 22px 18px 24px; }
     }
 
     @media (max-width: 520px) {
@@ -493,9 +514,13 @@
       .cta-row .tui-button { text-align: center; }
       .hero .cta-row .tui-button { padding: 16px 20px; font-size: 1.1em; }
       .theme-toggle { justify-content: center; }
-      .escriba-banner { padding: 60px 16px 24px; }
+      /* Deja sitio a la franja de la esquina por encima del sello. */
+      .escriba-banner { padding: 100px 16px 22px; }
+      .escriba-seal { width: 72px; height: 72px; }
+      .escriba-code { font-size: 1.1em; right: 12px; }
       .escriba-title { font-size: 1.8em; }
-      .escriba-ribbon { top: 24px; right: -86px; width: 280px; font-size: 0.6em; }
+      .escriba-ribbon { width: 170px; height: 170px; }
+      .escriba-ribbon span { top: 48px; right: -64px; width: 250px; font-size: 0.52rem; }
       .escriba-button { display: block; }
     }
   </style>
@@ -628,13 +653,13 @@
         <h2 class="tui-panel-header section-title">Del mismo autor</h2>
         <aside class="escriba-banner" aria-label="Escriba de la Marca">
           <div class="escriba-code" aria-hidden="true">E1</div>
-          <div class="escriba-ribbon" aria-hidden="true">Para coleccionistas de<br />Aventuras en la Marca del Este</div>
-          <img class="escriba-seal" src="./assets/escriba-seal.svg" alt="" width="128" height="128" loading="lazy" />
-          <div class="escriba-body">
+          <div class="escriba-ribbon" aria-hidden="true"><span>Para coleccionistas de<br />Aventuras en la Marca del Este</span></div>
+          <img class="escriba-seal" src="./assets/escriba-seal.svg" alt="" width="88" height="88" loading="lazy" />
+          <h3 class="escriba-title">Escriba de la Marca</h3>
+          <div class="escriba-rule" aria-hidden="true">❖</div>
+          <p class="escriba-subtitle">Aplicación para coleccionistas de todos los niveles</p>
+          <div class="escriba-frame">
             <p class="escriba-kicker">¿Coleccionas la Marca del Este?</p>
-            <h3 class="escriba-title">Escriba de la Marca</h3>
-            <div class="escriba-rule" aria-hidden="true">❖</div>
-            <p class="escriba-subtitle">Aplicación para coleccionistas de todos los niveles</p>
             <p class="escriba-text">Escriba de la Marca: escanea tus libros, mira qué módulos te faltan y no vuelvas a comprar uno repetido. Gratis, del mismo autor que OSR Manager.</p>
             <a class="escriba-button" href="https://favashi.github.io/escribadelamarca/?ref=osr-manager" rel="noopener">Abrir Escriba de la Marca →</a>
           </div>
