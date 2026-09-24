@@ -217,6 +217,7 @@ jobs:
           mkdir -p _site/app
           cp site/index.html _site/index.html
           if [ -d site/screenshots ]; then cp -r site/screenshots _site/screenshots; fi
+          if [ -d site/assets ]; then cp -r site/assets _site/assets; fi
 
           # CSS real de la app para la landing (site/index.html enlaza
           # ./css/tui.css y ./css/custom.css): copia independiente de la
