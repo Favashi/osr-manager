@@ -20,11 +20,13 @@
   <link rel="stylesheet" href="./css/tui.css" />
   <link rel="stylesheet" href="./css/custom.css" />
 
-  <!-- Tipografías SOLO del banner de Escriba de la Marca (identidad de
-       ese proyecto). Si no cargan (offline), cae a Georgia/serif. -->
+  <!-- Tipografías SOLO de los banners "Del mismo autor" (identidad de
+       esos proyectos: Cinzel/Uncial para Escriba de la Marca; Pirata One,
+       Jost y Oswald para Bestiarium). Si no cargan (offline), caen a
+       Georgia/serif o sans-serif. -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Uncial+Antiqua&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Uncial+Antiqua&family=Pirata+One&family=Jost:wght@400;500&family=Oswald:wght@500;600&display=swap" />
 
   <style>
     /* CSS propio de la landing: SOLO layout/composición. Colores,
@@ -444,6 +446,76 @@
       outline-offset: 3px;
     }
 
+    /* --- Del mismo autor: banner de Bestiarium. Misma excepción que el
+       de Escriba: identidad propia de ese proyecto (blanco y negro,
+       Pirata One / Jost / Oswald), colores fijos, no se re-tematiza. --- */
+    .bestiarium-banner {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 20px 28px;
+      margin-top: 24px;
+      padding: 30px 36px;
+      border: 2px solid #f2f2f2;
+      border-radius: 4px;
+      outline: 1px solid #f2f2f2;
+      outline-offset: -7px;
+      background: #0b0b0b;
+      color: #f2f2f2;
+      font-family: 'Jost', system-ui, sans-serif;
+    }
+
+    .bestiarium-icon { flex: none; width: 72px; height: 72px; }
+
+    .bestiarium-text { display: grid; gap: 8px; min-width: 0; }
+
+    .bestiarium-title {
+      margin: 0;
+      font: 400 1.9rem/1 'Pirata One', 'UnifrakturCook', Georgia, serif;
+      color: #f2f2f2;
+    }
+
+    .bestiarium-tagline {
+      margin: 0;
+      font: 500 0.82rem/1.3 'Oswald', 'Arial Narrow', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: #bdbdbd;
+      text-wrap: balance;
+    }
+
+    .bestiarium-desc { margin: 0; max-width: 40rem; font-size: 0.98rem; line-height: 1.5; color: #d8d8d8; }
+
+    .bestiarium-links { display: grid; gap: 10px; justify-items: center; }
+
+    .bestiarium-button {
+      display: inline-block;
+      padding: 12px 20px;
+      border-radius: 2px;
+      background: #f2f2f2;
+      color: #0b0b0b !important;
+      font: 600 0.95rem/1 'Oswald', 'Arial Narrow', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .bestiarium-button:hover,
+    .bestiarium-button:focus-visible { background: #ffffff; color: #0b0b0b !important; }
+
+    .bestiarium-button:focus-visible,
+    .bestiarium-code:focus-visible { outline: 2px solid #f2f2f2; outline-offset: 3px; }
+
+    .bestiarium-code {
+      font: 500 0.8rem/1 'Oswald', 'Arial Narrow', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #bdbdbd !important;
+    }
+
+    .bestiarium-code:hover { color: #f2f2f2 !important; }
+
     /* --- Footer --- */
     .footer-row { padding: 16px 44px; font-size: 0.85em; text-align: center; }
     .footer-row p { margin: 0 0 4px; opacity: 0.8; }
@@ -466,6 +538,11 @@
       .escriba-code { font-size: 1.25rem; top: 5px; right: 9px; }
       .escriba-cta { justify-self: stretch; }
       .escriba-button { white-space: normal; }
+      /* Bestiarium: apilado y centrado. */
+      .bestiarium-banner { grid-template-columns: 1fr; justify-items: center; text-align: center; padding: 30px 24px; }
+      .bestiarium-text { justify-items: center; }
+      .bestiarium-links { justify-self: stretch; }
+      .bestiarium-button { white-space: normal; }
     }
 
     @media (max-width: 760px) {
@@ -493,6 +570,8 @@
       .theme-toggle { justify-content: center; }
       .escriba-banner { padding-inline: 16px; }
       .escriba-button { padding: 12px 14px; font-size: 0.95em; }
+      .bestiarium-banner { padding: 26px 16px; }
+      .bestiarium-title { font-size: 1.7rem; }
     }
   </style>
 
@@ -635,6 +714,18 @@
           <div class="escriba-cta">
             <a class="escriba-button" href="https://favashi.github.io/escribadelamarca/?ref=osr-manager" rel="noopener">Abrir Escriba de la Marca →</a>
             <small>Gratis · del mismo autor que OSR Manager</small>
+          </div>
+        </aside>
+        <aside class="bestiarium-banner" aria-label="Bestiarium">
+          <img class="bestiarium-icon" src="./assets/bestiarium.svg" alt="" width="72" height="72" loading="lazy" />
+          <div class="bestiarium-text">
+            <h3 class="bestiarium-title">Bestiarium</h3>
+            <p class="bestiarium-tagline">Cartas de monstruos para OSE y La Marca del Este</p>
+            <p class="bestiarium-desc">Cartas tamaño tarot con anverso y reverso. Calcula PG, TAC0, salvaciones y PX a partir de los DG, organiza mazos por aventura e imprime a doble cara. Funciona sin conexión.</p>
+          </div>
+          <div class="bestiarium-links">
+            <a class="bestiarium-button" href="https://favashi.github.io/bestiarium/?ref=osr-manager" rel="noopener">Abrir Bestiarium →</a>
+            <a class="bestiarium-code" href="https://github.com/Favashi/bestiarium" rel="noopener">Código (MIT)</a>
           </div>
         </aside>
       </div>
